@@ -1,0 +1,22 @@
+---
+import { resolveMediaUrl } from '../utils/media';
+
+interface Props {
+  src: string;
+  caption?: string;
+}
+
+const { src, caption } = Astro.props;
+---
+
+<div class="rounded-4 overflow-hidden mt-4 mb-2">
+  <video
+    class="w-100"
+    src={resolveMediaUrl(src)}
+    controls
+    playsinline
+    muted
+    preload="metadata"
+  ></video>
+</div>
+{caption && <p class="pf-proj-caption mb-4">{caption}</p>}

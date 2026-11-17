@@ -1,0 +1,85 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { resolveMediaUrl } from '../utils/media';
+import homeData from '../content/settings/home.json';
+
+const reelVideoUrl = resolveMediaUrl(homeData.reelVideo || 'videos/portfolio.mp4', 'video');
+---
+
+<BaseLayout title="Home - ArtDanylov" activeNav="home" bodyClass="has-page-video" useAOS={true}>
+  <Fragment slot="before-nav">
+    <div class="page-video-bg" aria-hidden="true">
+      <video
+        id="bgVideo"
+        class="page-video"
+        src={reelVideoUrl}
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="auto"
+        tabindex="-1"
+        aria-hidden="true"
+        disablepictureinpicture
+      ></video>
+    </div>
+    <div class="page-video-scrim" aria-hidden="true"></div>
+    <div class="page-vignette" aria-hidden="true"></div>
+    <div class="page-crt" aria-hidden="true"></div>
+  </Fragment>
+
+  <section class="text-center position-relative d-flex overflow-hidden flex-column justify-content-center pb-5 hero-section">
+    <div class="container-fluid position-relative px-4 px-lg-5">
+      <h1
+        class="mb-0 pb-3 page-hero-title text-gradient-brand"
+        data-aos="fade-up"
+        data-aos-duration="1000"
+        style="font-size:230px;"
+      >
+        {homeData.heroTitle}
+      </h1>
+      <p
+        class="fw-light text-body-tertiary mx-auto hero-copy copy-wide"
+        data-aos="fade-up"
+        data-aos-duration="800"
+        data-aos-delay="700"
+      >
+        <strong class="fw-semibold text-body">{homeData.heroLeadBold}</strong>&nbsp;{homeData.heroLeadRest}
+      </p>
+      <div
+        class="d-flex flex-column justify-content-center gap-3 flex-sm-row mt-4"
+        data-aos="fade-up"
+        data-aos-duration="800"
+        data-aos-delay="750"
+      >
+        <a class="btn btn-primary btn-lg" role="button" href="">{homeData.reelButtonLabel}</a>
+      </div>
+    </div>
+
+    <section id="reel" class="reel-section" aria-hidden="true">
+      <div class="reel-shell">
+        <div class="reel-player">
+          <video
+            class="true true"
+            id="reelVideo"
+            src={reelVideoUrl}
+            muted
+            loop
+            preload="metadata"
+            controls
+          ></video>
+        </div>
+      </div>
+    </section>
+  </section>
+
+  <div class="marquee-wrapper border-top border-bottom" data-marquee-direction="left" data-marquee-pause="true">
+    <div class="marquee-track">
+      {homeData.marqueeItems.map((item) => (
+        <>
+          <span>{item}</span><span class="text-primary">•</span>
+        </>
+      ))}
+    </div>
+  </div>
+</BaseLayout>

@@ -1,0 +1,18 @@
+{
+  "heroTitle": "WELCOME",
+  "heroLeadBold": "To my 3d animator blog folio.",
+  "heroLeadRest": "It's under development and always try to evolve.",
+  "reelButtonLabel": "Reel View",
+  "reelVideo": "portfolio/portfolio.mp4",
+  "marqueeItems": [
+    "3d Animation",
+    "Rigging",
+    "Mocap",
+    "Mgear",
+    "Maya",
+    "Unreal Engine",
+    "Python",
+    "Technical Animation",
+    "PIPELINE"
+  ]
+}

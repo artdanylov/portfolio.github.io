@@ -1,0 +1,81 @@
+---
+import { resolveMediaUrl } from '../utils/media';
+import { toYoutubeEmbed, toVimeoEmbed } from '../utils/embed';
+
+interface Props {
+  type?: 'image' | 'video';
+  src: string;
+  caption?: string;
+  width?: string;
+}
+
+const { type, src, caption = '', width = '1680' } = Astro.props;
+const lower = src.trim().toLowerCase();
+const cleanWidth = String(width || '1680').trim();
+const maxWidthStyle = /^\d+$/.test(cleanWidth) ? `max-width: ${cleanWidth}px;` : 'max-width: 1680px;';
+
+const isYoutube = lower.includes('youtube.com') || lower.includes('youtu.be');
+const isVimeo = lower.includes('vimeo.com');
+const isVideo =
+  !isYoutube &&
+  !isVimeo &&
+  (type === 'video' ||
+    /\.(mp4|webm|mov|m4v)(\?.*)?$/.test(lower) ||
+    lower.includes('/videos/') ||
+    lower.startsWith('videos/'));
+---
+
+{isYoutube ? (
+  <div class="media-wide my-4" style={maxWidthStyle}>
+    <div class="pf-proj-media">
+      <div class="ratio ratio-16x9">
+        <iframe
+          src={toYoutubeEmbed(src)}
+          title={caption || 'YouTube video'}
+          allow="autoplay; encrypted-media"
+          allowfullscreen
+        ></iframe>
+      </div>
+    </div>
+    {caption && <p class="pf-proj-caption">{caption}</p>}
+  </div>
+) : isVimeo ? (
+  <div class="media-wide my-4" style={maxWidthStyle}>
+    <div class="pf-proj-media">
+      <div class="ratio ratio-16x9">
+        <iframe
+          src={toVimeoEmbed(src)}
+          title={caption || 'Vimeo video'}
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowfullscreen
+        ></iframe>
+      </div>
+    </div>
+    {caption && <p class="pf-proj-caption">{caption}</p>}
+  </div>
+) : isVideo ? (
+  <div class="media-wide my-4" style={maxWidthStyle}>
+    <div class="pf-proj-media">
+      <video
+        src={resolveMediaUrl(src, 'video')}
+        controls
+        playsinline
+        muted
+        preload="metadata"
+      ></video>
+    </div>
+    {caption && <p class="pf-proj-caption">{caption}</p>}
+  </div>
+) : (
+  <div class="media-wide my-4" style={maxWidthStyle}>
+    <div class="pf-proj-media">
+      <img
+        class="w-100 d-block"
+        src={resolveMediaUrl(src, 'image')}
+        alt={caption}
+        loading="lazy"
+      />
+    </div>
+    {caption && <p class="pf-proj-caption">{caption}</p>}
+  </div>
+)}

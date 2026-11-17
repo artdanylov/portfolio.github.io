@@ -1,0 +1,89 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export async function getStaticPaths() {
+  const articles = (await getCollection('articles')).sort(
+    (a, b) => b.data.date.getTime() - a.data.date.getTime()
+  );
+  return articles.map((article, index) => ({
+    params: { slug: article.id },
+    props: {
+      article,
+      prevArticle: index < articles.length - 1 ? articles[index + 1] : null,
+      nextArticle: index > 0 ? articles[index - 1] : null,
+    },
+  }));
+}
+
+const { article, prevArticle, nextArticle } = Astro.props;
+const { Content } = await render(article);
+
+function formatDate(date: Date): string {
+  return date.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+---
+
+<BaseLayout
+  title={`${article.data.title} - ArtDanylov`}
+  activeNav="blog"
+>
+  <section class="pt-8 pb-5">
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-lg-8">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <a class="pf-proj-back mb-0" href="/blog.html">← All posts</a>
+            {import.meta.env.DEV && (
+              <a
+                class="btn btn-sm btn-outline-light"
+                href={`/keystatic/collection/articles/item/${article.id}`}
+                target="_blank"
+                rel="noopener"
+              >
+                Edit in Keystatic
+              </a>
+            )}
+          </div>
+          <h1 class="mb-4 page-hero-title-sm">{article.data.title}</h1>
+          <p class="small text-body-tertiary mb-0">{formatDate(article.data.date)}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="pb-6">
+    <div class="container-fluid px-4 px-lg-5">
+      <div class="article-flow">
+        <Content />
+      </div>
+    </div>
+  </section>
+
+  <section class="pb-6">
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-lg-9">
+          <nav class="article-pager">
+            {prevArticle && (
+              <a href={`/articles/${prevArticle.id}.html`}>
+                <span>Previous</span>
+                {prevArticle.data.title}
+              </a>
+            )}
+            {nextArticle && (
+              <a class="text-end ms-auto" href={`/articles/${nextArticle.id}.html`}>
+                <span>Next</span>
+                {nextArticle.data.title}
+              </a>
+            )}
+          </nav>
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

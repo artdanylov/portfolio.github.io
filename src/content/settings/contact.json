@@ -1,0 +1,21 @@
+{
+  "tag": "Contact",
+  "heading": "Feel free to drop me a line.",
+  "intro": "Whether it's about animation, rigging, mocap, or just sharing thoughts — my inbox is always open.",
+  "linkedin": {
+    "label": "linkedin.com/in/artemdanylov",
+    "url": "https://linkedin.com/in/artemdanylov"
+  },
+  "instagram": {
+    "label": "@artdanylov",
+    "url": "https://instagram.com/artdanylov"
+  },
+  "discord": {
+    "label": "discord.gg/artemdanylov",
+    "url": "https://discord.gg/artemdanylov"
+  },
+  "artstation": {
+    "label": "artstation.com/artdanylov",
+    "url": "https://artstation.com/artdanylov"
+  }
+}

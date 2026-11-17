@@ -1,0 +1,26 @@
+---
+interface Props {
+  src: string;
+  title?: string;
+}
+
+const { src, title = 'YouTube video' } = Astro.props;
+
+function toYoutubeEmbed(input: string): string {
+  if (input.includes('youtube.com/embed/') || input.includes('youtube-nocookie.com/embed/')) {
+    return input;
+  }
+  const match = input.match(/(?:youtu\.be\/|v=)([A-Za-z0-9_-]{11})/);
+  const id = match ? match[1] : input;
+  return `https://www.youtube-nocookie.com/embed/${id}?rel=0`;
+}
+---
+
+<div class="rounded-4 overflow-hidden ratio ratio-16x9 mt-4 mb-4">
+  <iframe
+    src={toYoutubeEmbed(src)}
+    title={title}
+    allow="autoplay; encrypted-media"
+    allowfullscreen
+  ></iframe>
+</div>

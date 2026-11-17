@@ -1,0 +1,63 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { resolveMediaUrl } from '../utils/media';
+import { getOrderedWorks } from '../utils/works';
+
+const works = await getOrderedWorks();
+---
+
+<BaseLayout title="Portfolio - Artem Danylov" activeNav="portfolio" useAOS={true}>
+  <section class="text-center d-flex justify-content-center pt-8 pb-4">
+    <div class="container">
+      <h1
+        class="d-flex justify-content-center align-items-end mb-1 pb-3 page-hero-title text-gradient-brand"
+        data-aos="fade-up"
+        data-aos-duration="1000"
+      >
+        PORTFOLIO
+      </h1>
+      <p class="text-body-tertiary mt-1 mb-0 mx-auto copy-wide">
+        Animation, rigging and cinematics for games. Click any thumbnail to open the full breakdown.
+      </p>
+    </div>
+  </section>
+
+  <section class="w-100 pb-6">
+    <div class="container-fluid px-4 px-lg-5 blog-container blog-max-full">
+      <div class="mb-4"></div>
+      <div class="pf-grid">
+        {works.map((work) => (
+            <article class="pf-card">
+              <a
+                class="pf-thumb"
+                href={`/works/${work.id}.html`}
+                aria-label={`Open ${work.data.title}`}
+              >
+                <img
+                  src={resolveMediaUrl(work.data.thumbnail)}
+                  alt={`${work.data.title} thumbnail`}
+                  loading="lazy"
+                />
+              </a>
+              <div class="pf-meta">
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                  <h3 class="pf-title mb-0">{work.data.title}</h3>
+                  {import.meta.env.DEV && (
+                    <a
+                      class="btn btn-sm btn-outline-light py-0 px-2"
+                      href={`/keystatic/collection/works/item/${work.id}`}
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      Edit
+                    </a>
+                  )}
+                </div>
+                <p class="pf-sub">{work.data.cardSubtitle}</p>
+              </div>
+            </article>
+        ))}
+      </div>
+    </div>
+  </section>
+</BaseLayout>

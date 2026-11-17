@@ -1,0 +1,77 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { resolveMediaUrl } from '../utils/media';
+
+const articles = (await getCollection('articles')).sort(
+  (a, b) => b.data.date.getTime() - a.data.date.getTime()
+);
+
+function formatDate(date: Date): string {
+  return date.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+---
+
+<BaseLayout title="Blog - ArtDanylov" activeNav="blog" useAOS={true}>
+  <section class="text-center pt-8 pb-4">
+    <div class="container">
+      <h1
+        class="d-flex justify-content-center align-items-end mb-1 pb-3 page-hero-title text-gradient-brand"
+        data-aos="fade-up"
+        data-aos-duration="1000"
+      >
+        BLOG
+      </h1>
+      <p class="text-body-tertiary mt-1 mb-0 mx-auto copy-wide">
+        Notes on animation, rigging and the pipeline — classes, Houdini experiments and small discoveries.
+      </p>
+    </div>
+  </section>
+
+  <section class="w-100 pb-6">
+    <div class="container-fluid px-4 px-lg-5 blog-container blog-max-lg">
+      <div class="mb-4"></div>
+      <div class="blog-grid-4">
+        {articles.map((article) => (
+          <article class="blog-card">
+            <a
+              class="blog-card-media"
+              href={`/articles/${article.id}.html`}
+              aria-label={`Read ${article.data.title}`}
+            >
+              <img
+                src={resolveMediaUrl(article.data.coverImage)}
+                alt={article.data.title}
+                loading="lazy"
+              />
+            </a>
+            <div class="blog-card-body">
+              <div class="d-flex justify-content-between align-items-center gap-2">
+                <p class="blog-card-meta mb-0">
+                  {formatDate(article.data.date)}
+                </p>
+                {import.meta.env.DEV && (
+                  <a
+                    class="btn btn-sm btn-outline-light py-0 px-2"
+                    href={`/keystatic/collection/articles/item/${article.id}`}
+                    target="_blank"
+                    rel="noopener"
+                  >
+                    Edit
+                  </a>
+                )}
+              </div>
+              <h3 class="blog-card-title">
+                <a href={`/articles/${article.id}.html`}>{article.data.title}</a>
+              </h3>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+</BaseLayout>

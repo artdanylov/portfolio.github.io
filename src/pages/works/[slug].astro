@@ -1,0 +1,88 @@
+---
+import { render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getOrderedWorks } from '../../utils/works';
+
+export async function getStaticPaths() {
+  const works = await getOrderedWorks();
+  return works.map((work, index) => ({
+    params: { slug: work.id },
+    props: {
+      work,
+      prevWork: works[(index - 1 + works.length) % works.length],
+      nextWork: works[(index + 1) % works.length],
+    },
+  }));
+}
+
+const { work, prevWork, nextWork } = Astro.props;
+const { Content } = await render(work);
+---
+
+<BaseLayout
+  title={`${work.data.title} - ArtDanylov`}
+  description={work.data.description || work.data.lead}
+  activeNav="portfolio"
+>
+  <section class="pb-5 pf-proj-head">
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-lg-9">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <a class="pf-proj-back mb-0" href="/portfolio.html">← All projects</a>
+            {import.meta.env.DEV && (
+              <a
+                class="btn btn-sm btn-outline-light"
+                href={`/keystatic/collection/works/item/${work.id}`}
+                target="_blank"
+                rel="noopener"
+              >
+                Edit in Keystatic
+              </a>
+            )}
+          </div>
+          <h1 class="pf-proj-title">{work.data.title}</h1>
+          {work.data.lead && <p class="fs-5 text-body-tertiary mb-0 pf-proj-lead">{work.data.lead}</p>}
+          {(work.data.details?.client || work.data.details?.role || work.data.details?.tools) && (
+            <dl class="pf-proj-meta">
+              {work.data.details?.client && <div><dt>Client</dt><dd>{work.data.details.client}</dd></div>}
+              {work.data.details?.role && <div><dt>Role</dt><dd>{work.data.details.role}</dd></div>}
+              {work.data.details?.tools && <div><dt>Tools</dt><dd>{work.data.details.tools}</dd></div>}
+            </dl>
+          )}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="pb-6">
+    <div class="container-fluid px-4 px-lg-5">
+      <div class="article-flow pf-proj-body">
+        <Content />
+      </div>
+    </div>
+  </section>
+
+  <section class="pb-6">
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-lg-9">
+          <nav class="pf-proj-pager">
+            {prevWork && (
+              <a href={`/works/${prevWork.id}.html`}>
+                <span>Previous</span>
+                {prevWork.data.title}
+              </a>
+            )}
+            {nextWork && (
+              <a class="text-end ms-auto" href={`/works/${nextWork.id}.html`}>
+                <span>Next</span>
+                {nextWork.data.title}
+              </a>
+            )}
+          </nav>
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
