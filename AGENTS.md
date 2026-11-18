@@ -20,12 +20,13 @@
 - `media_local/` (в `.gitignore`):
   - `_toConvert/` — исходники видео и картинок (можно раскладывать по подпапкам, например `blog/...`, `portfolio/...`).
   - `Converted/` — сконвертированные `.mp4` (H.264, `yuv420p`, `faststart`, <=1080p/30fps) и `.webp` (в т.ч. из `.gif`), с сохранением структуры подпапок.
-- `scripts/media_sync.py` — конвертация из `_toConvert/` в `Converted/` (пропускает файлы, если выходной файл не старее исходника) и загрузка в Cloudflare R2 (`--upload` для новых, `--upload-all` для всех; ключи в R2 соответствуют путям внутри `Converted/`). Требует `ffmpeg`, `boto3` и `.env` (шаблон `.env.example`).
+- `scripts/media_sync.py` — конвертация новых файлов из `_toConvert/` в `Converted/` (пропускает файлы, если выходной файл не старее исходника), английский веб-интерфейс **Thumbnail Studio** (`--thumbs`) для уже готовых видео в `Converted/` (просмотр, копирование ссылок на `.mp4`, `_thumb.webp`, `_animthumb.webp` для CMS, генерация `_thumb.webp` `960x540` и `_animthumb.webp` `640x360 @ 24fps` с сохранением настроек в `.thumb_studio_state.json`), и загрузка в Cloudflare R2 (`--upload` для новых, `--upload-all` для всех). Требует `ffmpeg`, `boto3` и `.env` (шаблон `.env.example`).
 
 ## Команды и заметки по разработке (Windows)
 - В PowerShell использовать `npm.cmd` (т.к. `npm.ps1` может быть заблокирован политикой скриптов).
 - Запуск сайта + админки Keystatic: `dev.bat` или `npm.cmd run dev` → сайт на `http://127.0.0.1:4321/`, админка на `http://127.0.0.1:4321/keystatic`.
 - В `astro.config.mjs` Keystatic подключается только при `astro dev`; при `npm.cmd run build` собирается чистая статика в `dist/` без админки и без dev-кнопок `Edit`.
 - `serveLocalMedia()` в `astro.config.mjs` отдаёт `media_local/` в `dev` с поддержкой HTTP `Range` (`206 Partial Content`) для корректной работы `<video>`.
-- Конвертация и загрузка новых медиа в R2: `media_upload.bat` или `python scripts\media_sync.py --upload`.
+- Конвертация новых медиа из `_toConvert/` в `Converted/` и загрузка в R2: `media_upload.bat` или `python scripts\media_sync.py --upload`.
+- Открытие **Thumbnail Studio** для готовых видео в `Converted/` (с авто-выгрузкой новых превью в R2): `media_thumbs.bat` или `python scripts\media_sync.py --thumbs --upload`.
 - Полный релиз сайта (медиа в R2 → проверка `npm.cmd run build` → `git commit` + `git push`): `release.bat` или `python scripts\release.py`.
