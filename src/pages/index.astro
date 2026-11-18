@@ -6,7 +6,7 @@ import homeData from '../content/settings/home.json';
 const reelVideoUrl = resolveMediaUrl(homeData.reelVideo || 'videos/portfolio.mp4', 'video');
 ---
 
-<BaseLayout title="Home - ArtDanylov" activeNav="home" bodyClass="has-page-video" useAOS={true}>
+<BaseLayout title="Home - ArtDanylov" activeNav="home" bodyClass="has-page-video">
   <Fragment slot="before-nav">
     <div class="page-video-bg" aria-hidden="true">
       <video
@@ -31,10 +31,9 @@ const reelVideoUrl = resolveMediaUrl(homeData.reelVideo || 'videos/portfolio.mp4
   <section class="text-center position-relative d-flex overflow-hidden flex-column justify-content-center pb-5 hero-section">
     <div class="container-fluid position-relative px-4 px-lg-5">
       <h1
-        class="mb-0 pb-3 page-hero-title text-gradient-brand"
+        class="mb-0 pb-3 page-hero-title hero-display-title text-gradient-brand"
         data-aos="fade-up"
         data-aos-duration="1000"
-        style="font-size:230px;"
       >
         {homeData.heroTitle}
       </h1>
@@ -52,23 +51,13 @@ const reelVideoUrl = resolveMediaUrl(homeData.reelVideo || 'videos/portfolio.mp4
         data-aos-duration="800"
         data-aos-delay="750"
       >
-        <a class="btn btn-primary btn-lg" role="button" href="">{homeData.reelButtonLabel}</a>
+        <a class="btn btn-primary btn-lg" id="reelTrigger" role="button" href="#reel">{homeData.reelButtonLabel}</a>
       </div>
     </div>
 
     <section id="reel" class="reel-section" aria-hidden="true">
       <div class="reel-shell">
-        <div class="reel-player">
-          <video
-            class="true true"
-            id="reelVideo"
-            src={reelVideoUrl}
-            muted
-            loop
-            preload="metadata"
-            controls
-          ></video>
-        </div>
+        <div class="reel-player" id="reelTarget"></div>
       </div>
     </section>
   </section>

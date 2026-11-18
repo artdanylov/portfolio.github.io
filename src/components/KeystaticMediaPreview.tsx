@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { toYoutubeEmbed, toVimeoEmbed } from '../utils/embed';
+import { normalizeMediaPath } from '../utils/media';
 
 interface MediaValue {
   type?: 'image' | 'video';
@@ -17,17 +18,7 @@ interface MediaNodeViewProps {
 }
 
 function resolvePreviewUrl(src: string): string {
-  const normalized = src.trim().replace(/\\/g, '/');
-  const lower = normalized.toLowerCase();
-  let clean = normalized;
-  for (const marker of ['media_local/converted/', 'media_local/', 'converted/']) {
-    const idx = lower.indexOf(marker);
-    if (idx !== -1) {
-      clean = normalized.slice(idx + marker.length);
-      break;
-    }
-  }
-
+  let clean = normalizeMediaPath(src);
   if (clean.startsWith('http://') || clean.startsWith('https://') || clean.startsWith('/')) {
     return clean;
   }
