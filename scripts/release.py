@@ -35,32 +35,32 @@ def run(cmd: list[str], check: bool = True) -> subprocess.CompletedProcess:
 
 
 def main() -> None:
-    print("=== 1/3 Конвертация и загрузка новых медиа в Cloudflare R2 ===")
+    print("=== 1/3 Converting and uploading new media to Cloudflare R2 ===")
     run([sys.executable, "scripts/media_sync.py", "--upload"])
 
-    print("\n=== 2/3 Проверка продакшн-сборки Astro ===")
+    print("\n=== 2/3 Verifying Astro production build ===")
     run(["npm.cmd", "run", "build"])
 
-    print("\n=== 3/3 Публикация в Git ===")
+    print("\n=== 3/3 Publishing to Git ===")
     git_bin = find_git()
     if not git_bin:
-        print("Git CLI не найден на PATH. Откройте GitHub Desktop и сделайте Commit + Push вручную.")
+        print("Git CLI not found on PATH. Open GitHub Desktop to Commit + Push manually.")
         return
 
     status = subprocess.run([git_bin, "status", "--short"], cwd=BASE_DIR, capture_output=True, text=True)
     if not status.stdout.strip():
-        print("Нет изменений для коммита.")
+        print("No changes to commit.")
         return
 
     print(status.stdout)
-    msg = input("Сообщение коммита (Enter = авто): ").strip()
+    msg = input("Commit message (Enter = auto): ").strip()
     if not msg:
         msg = f"Update site ({datetime.now().strftime('%Y-%m-%d %H:%M')})"
 
     run([git_bin, "add", "-A"])
     run([git_bin, "commit", "-m", msg])
     run([git_bin, "push"])
-    print("\nГотово! GitHub Actions автоматически соберёт и обновит сайт.")
+    print("\nDone! GitHub Actions will automatically build and deploy the site.")
 
 
 if __name__ == "__main__":
