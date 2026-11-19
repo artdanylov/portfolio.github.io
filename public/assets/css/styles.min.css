@@ -380,7 +380,7 @@ html:has(.has-page-video) {
   width: 100%;
   aspect-ratio: 16 / 9;
   object-fit: cover;
-  transition: transform 0.5s, opacity 0.3s;
+  transition: transform 0.5s, filter 0.3s;
 }
 
 .blog-card-body {
@@ -416,7 +416,7 @@ html:has(.has-page-video) {
 
 .blog-card:hover .blog-card-media img {
   transform: scale(1.04);
-  opacity: 0.88;
+  filter: brightness(1.08);
 }
 
 .blog-card-title a:focus-visible,
