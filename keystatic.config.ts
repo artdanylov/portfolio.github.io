@@ -43,6 +43,21 @@ export default config({
       previewUrl: '/works/{slug}.html',
       format: { contentField: 'content' },
       schema: {
+        publishing: fields.object(
+          {
+            published: fields.checkbox({
+              label: 'Published',
+              defaultValue: true,
+            }),
+            publishToRss: fields.checkbox({
+              label: 'Push to RSS',
+              defaultValue: false,
+            }),
+          },
+          {
+            layout: [3, 9],
+          }
+        ),
         title: fields.slug({ name: { label: 'Title' } }),
         cardSubtitle: fields.text({
           label: 'Card Subtitle',
@@ -50,10 +65,6 @@ export default config({
         }),
         lead: fields.text({
           label: 'Lead Summary',
-          multiline: true,
-        }),
-        description: fields.text({
-          label: 'SEO Description',
           multiline: true,
         }),
         thumbnail: fields.text({
@@ -85,6 +96,21 @@ export default config({
       previewUrl: '/articles/{slug}.html',
       format: { contentField: 'content' },
       schema: {
+        publishing: fields.object(
+          {
+            published: fields.checkbox({
+              label: 'Published',
+              defaultValue: true,
+            }),
+            publishToRss: fields.checkbox({
+              label: 'Push to RSS',
+              defaultValue: false,
+            }),
+          },
+          {
+            layout: [3, 9],
+          }
+        ),
         title: fields.slug({ name: { label: 'Title' } }),
         date: fields.date({
           label: 'Publish Date',

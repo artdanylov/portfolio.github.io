@@ -28,30 +28,30 @@ const reelVideoUrl = resolveMediaUrl(homeData.reelVideo || 'videos/portfolio.mp4
     <div class="page-crt" aria-hidden="true"></div>
   </Fragment>
 
-  <section class="text-center position-relative d-flex overflow-hidden flex-column justify-content-center pb-5 hero-section">
-    <div class="container-fluid position-relative px-4 px-lg-5">
+  <section class="hero-section">
+    <div class="wrap-fluid wrap-padded hero-inner">
       <h1
-        class="mb-0 pb-3 page-hero-title hero-display-title text-gradient-brand"
+        class="hero-title-main page-hero-title hero-display-title text-gradient-brand"
         data-aos="fade-up"
         data-aos-duration="1000"
       >
         {homeData.heroTitle}
       </h1>
       <p
-        class="fw-light text-body-tertiary mx-auto hero-copy copy-wide"
+        class="hero-copy copy-wide text-muted"
         data-aos="fade-up"
         data-aos-duration="800"
         data-aos-delay="700"
       >
-        <strong class="fw-semibold text-body">{homeData.heroLeadBold}</strong>&nbsp;{homeData.heroLeadRest}
+        <strong class="hero-lead-strong">{homeData.heroLeadBold}</strong>&nbsp;{homeData.heroLeadRest}
       </p>
       <div
-        class="d-flex flex-column justify-content-center gap-3 flex-sm-row mt-4"
+        class="hero-actions"
         data-aos="fade-up"
         data-aos-duration="800"
         data-aos-delay="750"
       >
-        <a class="btn btn-primary btn-lg" id="reelTrigger" role="button" href="#reel">{homeData.reelButtonLabel}</a>
+        <a class="button button-primary button-lg" id="reelTrigger" role="button" href="#reel">{homeData.reelButtonLabel}</a>
       </div>
     </div>
 
@@ -62,11 +62,11 @@ const reelVideoUrl = resolveMediaUrl(homeData.reelVideo || 'videos/portfolio.mp4
     </section>
   </section>
 
-  <div class="marquee-wrapper border-top border-bottom" data-marquee-direction="left" data-marquee-pause="true">
+  <div class="marquee-wrapper" data-marquee-direction="left" data-marquee-pause="true">
     <div class="marquee-track">
       {homeData.marqueeItems.map((item) => (
         <>
-          <span>{item}</span><span class="text-primary">•</span>
+          <span>{item}</span><span class="text-accent">•</span>
         </>
       ))}
     </div>

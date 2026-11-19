@@ -7,8 +7,14 @@ const works = defineCollection({
     title: z.string(),
     cardSubtitle: z.string().optional().default(''),
     lead: z.string().optional().default(''),
-    description: z.string().optional().default(''),
     thumbnail: z.string().optional().default(''),
+    publishing: z
+      .object({
+        published: z.boolean().optional().default(true),
+        publishToRss: z.boolean().optional().default(false),
+      })
+      .optional()
+      .default({ published: true, publishToRss: false }),
     details: z
       .object({
         client: z.string().optional().nullable(),
@@ -26,6 +32,13 @@ const articles = defineCollection({
     title: z.string(),
     date: z.coerce.date(),
     coverImage: z.string().optional().default(''),
+    publishing: z
+      .object({
+        published: z.boolean().optional().default(true),
+        publishToRss: z.boolean().optional().default(false),
+      })
+      .optional()
+      .default({ published: true, publishToRss: false }),
   }),
 });
 

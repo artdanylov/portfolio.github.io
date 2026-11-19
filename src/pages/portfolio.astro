@@ -4,27 +4,33 @@ import { resolveThumbnailUrls } from '../utils/media';
 import { getOrderedWorks } from '../utils/works';
 
 const works = await getOrderedWorks();
+const ogImage = works[0]?.data.thumbnail ? resolveThumbnailUrls(works[0].data.thumbnail).staticUrl : undefined;
 ---
 
-<BaseLayout title="Portfolio - Artem Danylov" activeNav="portfolio">
-  <section class="text-center d-flex justify-content-center pt-8 pb-4">
-    <div class="container">
+<BaseLayout
+  title="Portfolio - Artem Danylov"
+  description="Animation, rigging and cinematics for games by Artem Danylov."
+  image={ogImage}
+  activeNav="portfolio"
+>
+  <section class="page-header page-header-flex">
+    <div class="wrap">
       <h1
-        class="d-flex justify-content-center align-items-end mb-1 pb-3 page-hero-title text-gradient-brand"
+        class="page-header-title page-hero-title text-gradient-brand"
         data-aos="fade-up"
         data-aos-duration="1000"
       >
         PORTFOLIO
       </h1>
-      <p class="text-body-tertiary mt-1 mb-0 mx-auto copy-wide">
+      <p class="page-header-lead copy-wide text-muted">
         Animation, rigging and cinematics for games. Click any thumbnail to open the full breakdown.
       </p>
     </div>
   </section>
 
-  <section class="w-100 pb-6">
-    <div class="container-fluid px-4 px-lg-5 blog-container blog-max-full">
-      <div class="mb-4"></div>
+  <section class="page-section-listing">
+    <div class="wrap-fluid wrap-padded blog-container blog-max-full">
+      <div class="page-section-spacer"></div>
       <div class="pf-grid">
         {works.map((work) => {
           const thumb = resolveThumbnailUrls(work.data.thumbnail);
@@ -44,17 +50,20 @@ const works = await getOrderedWorks();
                 />
               </a>
               <div class="pf-meta">
-                <div class="d-flex justify-content-between align-items-start gap-2">
-                  <h3 class="pf-title mb-0">{work.data.title}</h3>
+                <div class="card-head">
+                  <h3 class="pf-title no-mb">{work.data.title}</h3>
                   {import.meta.env.DEV && (
-                    <a
-                      class="btn btn-sm btn-outline-light py-0 px-2"
-                      href={`/keystatic/collection/works/item/${work.id}`}
-                      target="_blank"
-                      rel="noopener"
-                    >
-                      Edit
-                    </a>
+                    <div class="dev-actions">
+                      {!work.data.publishing.published && <span class="draft-badge">Draft</span>}
+                      <a
+                        class="button button-sm button-ghost button-edit"
+                        href={`/keystatic/collection/works/item/${work.id}`}
+                        target="_blank"
+                        rel="noopener"
+                      >
+                        Edit
+                      </a>
+                    </div>
                   )}
                 </div>
                 <p class="pf-sub">{work.data.cardSubtitle}</p>

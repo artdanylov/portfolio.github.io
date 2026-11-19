@@ -3,9 +3,10 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { resolveThumbnailUrls } from '../utils/media';
 
-const articles = (await getCollection('articles')).sort(
-  (a, b) => b.data.date.getTime() - a.data.date.getTime()
-);
+const articles = (await getCollection('articles'))
+  .filter((a) => import.meta.env.DEV || a.data.publishing.published)
+  .sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
+const ogImage = articles[0]?.data.coverImage ? resolveThumbnailUrls(articles[0].data.coverImage).staticUrl : undefined;
 
 function formatDate(date: Date): string {
   return date.toLocaleDateString('en-GB', {
@@ -16,25 +17,30 @@ function formatDate(date: Date): string {
 }
 ---
 
-<BaseLayout title="Blog - ArtDanylov" activeNav="blog">
-  <section class="text-center pt-8 pb-4">
-    <div class="container">
+<BaseLayout
+  title="Blog - ArtDanylov"
+  description="Notes on 3D animation, rigging, Houdini, and pipeline by Artem Danylov."
+  image={ogImage}
+  activeNav="blog"
+>
+  <section class="page-header">
+    <div class="wrap">
       <h1
-        class="d-flex justify-content-center align-items-end mb-1 pb-3 page-hero-title text-gradient-brand"
+        class="page-header-title page-hero-title text-gradient-brand"
         data-aos="fade-up"
         data-aos-duration="1000"
       >
         BLOG
       </h1>
-      <p class="text-body-tertiary mt-1 mb-0 mx-auto copy-wide">
+      <p class="page-header-lead copy-wide text-muted">
         Notes on animation, rigging and the pipeline — classes, Houdini experiments and small discoveries.
       </p>
     </div>
   </section>
 
-  <section class="w-100 pb-6">
-    <div class="container-fluid px-4 px-lg-5 blog-container blog-max-lg">
-      <div class="mb-4"></div>
+  <section class="page-section-listing">
+    <div class="wrap-fluid wrap-padded blog-container blog-max-lg">
+      <div class="page-section-spacer"></div>
       <div class="blog-grid-4">
         {articles.map((article) => {
           const thumb = resolveThumbnailUrls(article.data.coverImage);
@@ -54,19 +60,22 @@ function formatDate(date: Date): string {
                 />
               </a>
               <div class="blog-card-body">
-                <div class="d-flex justify-content-between align-items-center gap-2">
-                  <p class="blog-card-meta mb-0">
+                <div class="card-head-center">
+                  <p class="blog-card-meta no-mb">
                     {formatDate(article.data.date)}
                   </p>
                   {import.meta.env.DEV && (
-                    <a
-                      class="btn btn-sm btn-outline-light py-0 px-2"
-                      href={`/keystatic/collection/articles/item/${article.id}`}
-                      target="_blank"
-                      rel="noopener"
-                    >
-                      Edit
-                    </a>
+                    <div class="dev-actions">
+                      {!article.data.publishing.published && <span class="draft-badge">Draft</span>}
+                      <a
+                        class="button button-sm button-ghost button-edit"
+                        href={`/keystatic/collection/articles/item/${article.id}`}
+                        target="_blank"
+                        rel="noopener"
+                      >
+                        Edit
+                      </a>
+                    </div>
                   )}
                 </div>
                 <h3 class="blog-card-title">

@@ -26,9 +26,9 @@ const isVideo =
 ---
 
 {isYoutube ? (
-  <div class="media-wide my-4" style={maxWidthStyle}>
+  <div class="media-wide media-block" style={maxWidthStyle}>
     <div class="pf-proj-media">
-      <div class="ratio ratio-16x9">
+      <div class="embed-ratio embed-16x9">
         <iframe
           src={toYoutubeEmbed(src)}
           title={caption || 'YouTube video'}
@@ -40,9 +40,9 @@ const isVideo =
     {caption && <p class="pf-proj-caption">{caption}</p>}
   </div>
 ) : isVimeo ? (
-  <div class="media-wide my-4" style={maxWidthStyle}>
+  <div class="media-wide media-block" style={maxWidthStyle}>
     <div class="pf-proj-media">
-      <div class="ratio ratio-16x9">
+      <div class="embed-ratio embed-16x9">
         <iframe
           src={toVimeoEmbed(src)}
           title={caption || 'Vimeo video'}
@@ -54,7 +54,7 @@ const isVideo =
     {caption && <p class="pf-proj-caption">{caption}</p>}
   </div>
 ) : isVideo ? (
-  <div class="media-wide my-4" style={maxWidthStyle}>
+  <div class="media-wide media-block" style={maxWidthStyle}>
     <div class="pf-proj-media">
       <video
         src={resolveMediaUrl(src, 'video')}
@@ -67,10 +67,10 @@ const isVideo =
     {caption && <p class="pf-proj-caption">{caption}</p>}
   </div>
 ) : (
-  <div class="media-wide my-4" style={maxWidthStyle}>
+  <div class="media-wide media-block" style={maxWidthStyle}>
     <div class="pf-proj-media">
       <img
-        class="w-100 d-block"
+        class="media-img"
         src={resolveMediaUrl(src, 'image')}
         alt={caption}
         loading="lazy"

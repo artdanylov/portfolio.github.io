@@ -2,8 +2,8 @@ import { getCollection } from 'astro:content';
 import fs from 'node:fs';
 import path from 'node:path';
 
-export async function getOrderedWorks() {
-  const works = await getCollection('works');
+export async function getOrderedWorks(includeDrafts = import.meta.env.DEV) {
+  const works = (await getCollection('works')).filter((w) => includeDrafts || w.data.publishing.published);
   let orderList: string[] = [];
 
   try {

@@ -1,28 +1,89 @@
 ---
+import contactData from '../content/settings/contact.json';
+import homeData from '../content/settings/home.json';
+
 interface Props {
   title: string;
   description?: string;
+  image?: string;
+  ogType?: 'website' | 'article';
+  noIndex?: boolean;
   activeNav?: 'home' | 'portfolio' | 'blog' | 'contact';
   bodyClass?: string;
 }
 
+const DEFAULT_DESCRIPTION =
+  'Artem Danylov — 3D animator, character rigger, and technical artist specializing in Maya, Unreal Engine, mocap, and game cinematics.';
+
 const {
   title,
-  description,
+  description = DEFAULT_DESCRIPTION,
+  image,
+  ogType = 'website',
+  noIndex = false,
   activeNav,
   bodyClass = '',
 } = Astro.props;
+
+const siteOrigin = (Astro.site?.toString() || 'https://artdanylov.com').replace(/\/$/, '');
+const rawPath = Astro.url.pathname;
+const normalizedPath = rawPath === '/index.html' ? '/' : rawPath;
+const canonicalUrl = `${siteOrigin}${normalizedPath}`;
+
+const ogImage = image
+  ? /^https?:\/\//i.test(image)
+    ? image
+    : `${siteOrigin}${image.startsWith('/') ? '' : '/'}${image}`
+  : undefined;
+
+const sameAs = [
+  contactData.linkedin?.url,
+  contactData.artstation?.url,
+  contactData.instagram?.url,
+].filter((url): url is string => Boolean(url && /^https?:\/\//i.test(url)));
+
+const personSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: 'Artem Danylov',
+  alternateName: 'ArtDanylov',
+  url: `${siteOrigin}/`,
+  jobTitle: '3D Animator & Character Rigger',
+  knowsAbout: homeData.marqueeItems || [],
+  sameAs,
+};
 ---
 
 <!DOCTYPE html>
-<html data-bs-theme="dark" lang="en">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no" />
     <title>{title}</title>
-    {description && <meta name="description" content={description} />}
+    <meta name="description" content={description} />
+    {noIndex ? (
+      <meta name="robots" content="noindex, nofollow" />
+    ) : (
+      <link rel="canonical" href={canonicalUrl} />
+    )}
+
+    <meta property="og:site_name" content="ArtDanylov" />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    {ogImage && <meta property="og:image" content={ogImage} />}
+
+    <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    {ogImage && <meta name="twitter:image" content={ogImage} />}
+
+    <script type="application/ld+json" set:html={JSON.stringify(personSchema)} />
+
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="stylesheet" href="/assets/bootstrap/css/bootstrap.min.css" />
+    <link rel="alternate" type="application/rss+xml" title="ArtDanylov RSS" href="/rss.xml" />
+    <link rel="stylesheet" href="/assets/css/base.css" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Outfit:200,300,400,500,600,700,800,900&display=swap" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Space+Grotesk:300,400,500,600,700&display=swap" />
     <link rel="stylesheet" href="/assets/css/styles.min.css" />
@@ -30,33 +91,33 @@ const {
   <body class={bodyClass}>
     <slot name="before-nav" />
 
-    <nav class="navbar navbar-expand-lg fixed-top border-bottom">
-      <div class="container-fluid">
-        <a class="navbar-brand text-uppercase" href="/">Artem Danylov</a>
+    <nav class="site-nav">
+      <div class="wrap-fluid site-nav-inner">
+        <a class="site-brand" href="/">Artem Danylov</a>
         <button
-          class="navbar-toggler border-0 shadow-none px-2 py-1"
-          data-bs-toggle="collapse"
-          data-bs-target="#mainNav"
+          class="site-nav-toggle"
+          data-nav-toggle
+          data-nav-target="#mainNav"
           type="button"
           aria-controls="mainNav"
           aria-expanded="false"
           aria-label="Toggle navigation"
         >
-          <span class="navbar-toggler-icon"></span>
+          <span class="site-nav-toggle-icon"></span>
         </button>
-        <div class="collapse navbar-collapse" id="mainNav">
-          <ul class="navbar-nav align-items-lg-center gap-lg-1 mx-lg-auto">
-            <li class="nav-item">
-              <a class={`nav-link${activeNav === 'home' ? ' active' : ''}`} href="/index.html">Home</a>
+        <div class="site-nav-menu" id="mainNav">
+          <ul class="site-nav-list">
+            <li class="site-nav-item">
+              <a class={`site-nav-link${activeNav === 'home' ? ' is-active' : ''}`} href="/index.html">Home</a>
             </li>
-            <li class="nav-item">
-              <a class={`nav-link${activeNav === 'portfolio' ? ' active' : ''}`} href="/portfolio.html">Portfolio</a>
+            <li class="site-nav-item">
+              <a class={`site-nav-link${activeNav === 'portfolio' ? ' is-active' : ''}`} href="/portfolio.html">Portfolio</a>
             </li>
-            <li class="nav-item">
-              <a class={`nav-link${activeNav === 'blog' ? ' active' : ''}`} href="/blog.html">Blog</a>
+            <li class="site-nav-item">
+              <a class={`site-nav-link${activeNav === 'blog' ? ' is-active' : ''}`} href="/blog.html">Blog</a>
             </li>
-            <li class="nav-item">
-              <a class={`nav-link${activeNav === 'contact' ? ' active' : ''}`} href="/contact.html">Contact</a>
+            <li class="site-nav-item">
+              <a class={`site-nav-link${activeNav === 'contact' ? ' is-active' : ''}`} href="/contact.html">Contact</a>
             </li>
           </ul>
         </div>
@@ -65,17 +126,16 @@ const {
 
     <slot />
 
-    <footer class="py-5 border-top">
-      <div class="container-fluid px-4 px-lg-5">
-        <div class="text-center text-md-start d-flex flex-column justify-content-between align-items-center gap-3 flex-md-row">
-          <div class="d-flex flex-row justify-content-center align-items-center gap-2 gap-sm-3 ms-md-auto footer-actions">
-            <p class="text-nowrap text-body-tertiary mb-0 footer-copy">© {new Date().getFullYear()} ArtDanylov</p>
+    <footer class="site-footer">
+      <div class="wrap-fluid wrap-padded">
+        <div class="site-footer-row">
+          <div class="footer-actions">
+            <p class="footer-copy">© {new Date().getFullYear()} ArtDanylov</p>
           </div>
         </div>
       </div>
     </footer>
 
-    <script is:inline src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
     <script is:inline src="/assets/js/script.min.js"></script>
   </body>
 </html>

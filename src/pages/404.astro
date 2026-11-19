@@ -2,24 +2,22 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
-<BaseLayout title="Page Not Found - ArtDanylov" bodyClass="d-flex min-vh-100 flex-column">
-  <section class="d-flex flex-grow-1 align-items-center">
-    <div class="container">
-      <div class="row justify-content-center">
-        <div class="col-md-10 col-lg-8 text-center">
-          <p class="mb-3 section-tag">Error 404</p>
-          <h1 class="page-hero-title">Page not found.</h1>
-          <p class="text-body-tertiary mt-4 mb-5">
-            The page you're looking for doesn't exist or has moved. Head back home or check out the portfolio.
-          </p>
-          <div class="d-flex flex-column justify-content-center gap-3 flex-sm-row">
-            <a class="btn btn-primary btn-lg px-5" role="button" href="/">Back to Home</a>
-            <a class="btn btn-outline-light btn-lg px-5" role="button" href="/portfolio.html">View Portfolio</a>
-          </div>
-          <p class="text-body-tertiary mt-5 mb-0">
-            Think something's broken? <a href="/contact.html">Let us know</a>
-          </p>
+<BaseLayout title="Page Not Found - ArtDanylov" bodyClass="page-404-body" noIndex={true}>
+  <section class="page-404-main">
+    <div class="wrap">
+      <div class="wrap-centered text-center">
+        <p class="section-tag">Error 404</p>
+        <h1 class="page-hero-title">Page not found.</h1>
+        <p class="text-muted page-404-copy">
+          The page you're looking for doesn't exist or has moved. Head back home or check out the portfolio.
+        </p>
+        <div class="page-404-actions">
+          <a class="button button-primary button-lg button-wide" role="button" href="/">Back to Home</a>
+          <a class="button button-ghost button-lg button-wide" role="button" href="/portfolio.html">View Portfolio</a>
         </div>
+        <p class="text-muted page-404-foot">
+          Think something's broken? <a href="/contact.html">Let us know</a>
+        </p>
       </div>
     </div>
   </section>

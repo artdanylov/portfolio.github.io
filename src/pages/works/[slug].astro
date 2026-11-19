@@ -1,6 +1,7 @@
 ---
 import { render } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import { resolveThumbnailUrls } from '../../utils/media';
 import { getOrderedWorks } from '../../utils/works';
 
 export async function getStaticPaths() {
@@ -17,71 +18,73 @@ export async function getStaticPaths() {
 
 const { work, prevWork, nextWork } = Astro.props;
 const { Content } = await render(work);
+const ogImage = work.data.thumbnail ? resolveThumbnailUrls(work.data.thumbnail).staticUrl : undefined;
 ---
 
 <BaseLayout
   title={`${work.data.title} - ArtDanylov`}
-  description={work.data.description || work.data.lead}
+  description={work.data.lead}
+  image={ogImage}
+  ogType="article"
   activeNav="portfolio"
 >
-  <section class="pb-5 pf-proj-head">
-    <div class="container">
-      <div class="row justify-content-center">
-        <div class="col-lg-9">
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <a class="pf-proj-back mb-0" href="/portfolio.html">← All projects</a>
-            {import.meta.env.DEV && (
+  <section class="page-section-head pf-proj-head">
+    <div class="wrap">
+      <div class="wrap-reading">
+        <div class="meta-bar">
+          <a class="pf-proj-back no-mb" href="/portfolio.html">← All projects</a>
+          {import.meta.env.DEV && (
+            <div class="dev-actions">
+              {!work.data.publishing.published && <span class="draft-badge">Draft</span>}
               <a
-                class="btn btn-sm btn-outline-light"
+                class="button button-sm button-ghost"
                 href={`/keystatic/collection/works/item/${work.id}`}
                 target="_blank"
                 rel="noopener"
               >
                 Edit in Keystatic
               </a>
-            )}
-          </div>
-          <h1 class="pf-proj-title">{work.data.title}</h1>
-          {work.data.lead && <p class="fs-5 text-body-tertiary mb-0 pf-proj-lead">{work.data.lead}</p>}
-          {(work.data.details?.client || work.data.details?.role || work.data.details?.tools) && (
-            <dl class="pf-proj-meta">
-              {work.data.details?.client && <div><dt>Client</dt><dd>{work.data.details.client}</dd></div>}
-              {work.data.details?.role && <div><dt>Role</dt><dd>{work.data.details.role}</dd></div>}
-              {work.data.details?.tools && <div><dt>Tools</dt><dd>{work.data.details.tools}</dd></div>}
-            </dl>
+            </div>
           )}
         </div>
+        <h1 class="pf-proj-title">{work.data.title}</h1>
+        {work.data.lead && <p class="proj-lead-text text-muted pf-proj-lead">{work.data.lead}</p>}
+        {(work.data.details?.client || work.data.details?.role || work.data.details?.tools) && (
+          <dl class="pf-proj-meta">
+            {work.data.details?.client && <div><dt>Client</dt><dd>{work.data.details.client}</dd></div>}
+            {work.data.details?.role && <div><dt>Role</dt><dd>{work.data.details.role}</dd></div>}
+            {work.data.details?.tools && <div><dt>Tools</dt><dd>{work.data.details.tools}</dd></div>}
+          </dl>
+        )}
       </div>
     </div>
   </section>
 
-  <section class="pb-6">
-    <div class="container-fluid px-4 px-lg-5">
+  <section class="page-section-body">
+    <div class="wrap-fluid wrap-padded">
       <div class="article-flow pf-proj-body">
         <Content />
       </div>
     </div>
   </section>
 
-  <section class="pb-6">
-    <div class="container">
-      <div class="row justify-content-center">
-        <div class="col-lg-9">
-          <nav class="pf-proj-pager">
-            {prevWork && (
-              <a href={`/works/${prevWork.id}.html`}>
-                <span>Previous</span>
-                {prevWork.data.title}
-              </a>
-            )}
-            {nextWork && (
-              <a class="text-end ms-auto" href={`/works/${nextWork.id}.html`}>
-                <span>Next</span>
-                {nextWork.data.title}
-              </a>
-            )}
-          </nav>
-        </div>
+  <section class="page-section-body">
+    <div class="wrap">
+      <div class="wrap-reading">
+        <nav class="pf-proj-pager">
+          {prevWork && (
+            <a href={`/works/${prevWork.id}.html`}>
+              <span>Previous</span>
+              {prevWork.data.title}
+            </a>
+          )}
+          {nextWork && (
+            <a class="pager-next" href={`/works/${nextWork.id}.html`}>
+              <span>Next</span>
+              {nextWork.data.title}
+            </a>
+          )}
+        </nav>
       </div>
     </div>
   </section>
