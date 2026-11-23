@@ -42,14 +42,55 @@ const sameAs = [
   contactData.instagram?.url,
 ].filter((url): url is string => Boolean(url && /^https?:\/\//i.test(url)));
 
+const MULTILINGUAL_KEYWORDS = [
+  'Artem Danylov',
+  'ArtDanylov',
+  'Артем Данилов',
+  'Артём Данилов',
+  'Артем Данілов',
+  '3D animator',
+  'character rigger',
+  'technical animator',
+  '3D аніматор',
+  '3D анімація',
+  'ріггінг персонажів',
+  'ігрові синематики',
+  '3D аниматор',
+  '3D анимация',
+  'риггинг персонажей',
+  'техническая анимация',
+  'игровые синематики',
+  'Maya',
+  'Unreal Engine',
+  'mGear',
+  'mocap',
+  'мокап',
+];
+
 const personSchema = {
   '@context': 'https://schema.org',
   '@type': 'Person',
   name: 'Artem Danylov',
-  alternateName: 'ArtDanylov',
+  alternateName: ['ArtDanylov', 'Артем Данилов', 'Артём Данилов', 'Артем Данілов'],
   url: `${siteOrigin}/`,
   jobTitle: '3D Animator & Character Rigger',
-  knowsAbout: homeData.marqueeItems || [],
+  description:
+    'Artem Danylov — 3D animator & character rigger (Maya, Unreal Engine, mocap). Артем Данилов — 3D аніматор і ріггер персонажів / 3D аниматор и риггер персонажей.',
+  knowsLanguage: ['en', 'uk', 'ru'],
+  knowsAbout: Array.from(
+    new Set([
+      ...(homeData.marqueeItems || []),
+      '3D анімація',
+      'Ріггінг персонажів',
+      'Технічна анімація',
+      'Ігрові синематики',
+      '3D анимация',
+      'Риггинг персонажей',
+      'Техническая анимация',
+      'Игровые синематики',
+      'Мокап',
+    ])
+  ),
   sameAs,
 };
 ---
@@ -61,6 +102,7 @@ const personSchema = {
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no" />
     <title>{title}</title>
     <meta name="description" content={description} />
+    <meta name="keywords" content={MULTILINGUAL_KEYWORDS.join(', ')} />
     {noIndex ? (
       <meta name="robots" content="noindex, nofollow" />
     ) : (
@@ -68,6 +110,9 @@ const personSchema = {
     )}
 
     <meta property="og:site_name" content="ArtDanylov" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale:alternate" content="uk_UA" />
+    <meta property="og:locale:alternate" content="ru_RU" />
     <meta property="og:type" content={ogType} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />

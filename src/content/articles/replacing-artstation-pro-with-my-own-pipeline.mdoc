@@ -1,0 +1,95 @@
+---
+publishing:
+  published: false
+  publishToRss: false
+title: Replacing ArtStation Pro with My Own Portfolio Pipeline (and 1-Click Social Posting)
+date: 2026-11-20
+coverImage: ''
+---
+For a long time, paying for a portfolio platform felt like the default tax of working in 3D. You upload your reels and breakdowns, connect a custom domain, and keep paying a recurring subscription just to keep the lights on — while still living inside someone else's layout, compression rules, and social feed.
+
+Instead of renewing **ArtStation Pro**, I built my own static portfolio, blog, local CMS, and media CDN pipeline around **artdanylov.com**. It costs **$0/month** to host and run, gives me full control over video quality and animated thumbnails, and sets up **1-click social media distribution** straight from the publishing workflow.
+
+Here is how the whole setup works under the hood, what it actually costs, and what it unlocks.
+
+## How I Built It
+
+The core idea was simple: **keep editing and media processing local, and ship pure static HTML to production.** No database, no WordPress maintenance, no backend servers to babysit.
+
+### 1. Static Core with Astro 5 + Markdoc
+
+The site is built with **Astro 5** (`output: 'static'`) and **Markdoc** (`.mdoc`). Every portfolio project and blog post lives as a plain text file in the repository, styled with a lightweight custom CSS/JS design system (no Bootstrap or heavy client-side frameworks).
+
+When the site builds, Astro outputs clean static `.html` files into `dist/`, complete with:
+
+- Canonical URLs, Open Graph tags, and Twitter Cards
+- Auto-generated JSON-LD `Person` schema populated from my profile settings
+- Automatic `/sitemap.xml` and `/rss.xml` feeds
+- A serverless contact form on `/contact.html` powered by **Web3Forms**
+
+Hosting and deployments run on **GitHub Pages** + **GitHub Actions** — every push to `main` rebuilds and deploys the site automatically.
+
+### 2. Local-Only CMS with Keystatic
+
+Editing raw Markdown works, but dragging cards to reorder a portfolio or toggling draft flags is much faster in a visual UI. That is where **Keystatic** comes in.
+
+Keystatic is mounted at `/keystatic` **only during local `astro dev`**. In production builds (`npm run build`), React and Keystatic are completely excluded — zero CMS code ever hits the live website.
+
+Inside the local CMS I have:
+
+- **Portfolio Works** & **Blog Articles** with live media previews (`{% media %}` handles `.webp`, `.mp4`, YouTube, and Vimeo embeds)
+- **Published** and **Push to RSS** checkboxes on every entry (drafts show a `Draft` badge in `dev` and are excluded from production builds, `sitemap.xml`, and `rss.xml`)
+- **Portfolio Order** singleton to reorder portfolio cards via drag-and-drop
+- **Home Page** and **Contact Page** singletons for hero text, showreel video, marquee skills, and social links
+
+### 3. Automated Media Pipeline + Video & Thumbnail Studio
+
+3D portfolios are heavy on video playblasts, turntables, and GIFs. Hosting them in a Git repo would bloat it immediately, so I wrote a Python pipeline (`scripts/media_sync.py`) backed by **FFmpeg**, **boto3**, and **Cloudflare R2**:
+
+1. **Drop raw files** (`.mp4`, `.mov`, `.png`, `.jpg`, `.gif`, etc.) into `media_local/_toConvert/` organized by folder (`portfolio/`, `blog/`).
+2. **Auto-convert & sanitize**: the script normalizes filenames (removes spaces, transliterates non-ASCII characters) and transcodes videos to web-optimized H.264 `.mp4` (`<= 1080p`, `30fps`, `faststart`) and images/GIFs to `.webp`.
+3. **Video & Thumbnail Studio** (`--thumbs`): launches a local web UI where I can preview converted clips, copy CMS paths in one click, and generate animated hover thumbnails (`_thumb.webp` at `640×360`) plus static fallbacks (`_thumb_static.webp`) with interactive **Crop / Pan & Zoom** framing.
+4. **Dev vs. Prod resolution**: during local development, Astro serves `media_local/Converted/` directly with HTTP `Range` support for instant video scrubbing; in production, every relative path resolves to `https://media.artdanylov.com/` on Cloudflare R2.
+
+### 4. One-Command Release
+
+When everything looks right locally, running `release.bat` (`scripts/release.py`) handles the entire ship sequence:
+
+1. Converts and uploads only new or updated media files to Cloudflare R2
+2. Runs `npm run build` to verify the static production output
+3. Commits and pushes the changes to GitHub, triggering the Pages deployment
+
+## Cost Comparison: Custom Pipeline vs. ArtStation Pro
+
+Here is the real math behind switching away from a hosted portfolio subscription:
+
+- **ArtStation Pro**: **$9.95/month** billed annually (**~$119.40/year**). You get a hosted portfolio and custom domain support, but you are paying forever just to keep your own work online under platform rules.
+- **GitHub Pages + GitHub Actions**: **$0/month** for static hosting and automated CI/CD builds.
+- **Astro + Markdoc + Keystatic**: **$0/month** (all open-source, running locally with zero SaaS fees).
+- **Cloudflare R2 Media CDN**: **$0/month** inside the Always Free tier (**10 GB** of storage, **1M** write operations, **10M** read operations per month, and **$0 egress/bandwidth fees** — meaning views and video streaming never generate surprise traffic bills). Even if a portfolio eventually grows past 10 GB, additional storage is **$0.015 per GB-month** with egress still at **$0**.
+- **Web3Forms (Contact Page)**: **$0/month** on the free tier.
+- **Custom Domain (`artdanylov.com`)**: **~$10–$15/year**, which you already pay separately even if you connect a custom domain to ArtStation Pro.
+
+In short, moving to my own pipeline saves **roughly $120/year** right out of the gate, drops ongoing platform costs to **$0/month**, and eliminates vendor lock-in.
+
+## What Capabilities It Unlocks
+
+Saving money is nice, but the real upgrade is owning the entire presentation and distribution pipeline:
+
+- **Animated hover previews**: portfolio and blog cards display a crisp static frame by default and smoothly swap to an animated `.webp` preview generated in Thumbnail Studio — something generic portfolio templates rarely let you tune frame-by-frame.
+- **Full quality & layout control**: my reels, breakdowns, and articles use my own typography, dark palette, and 16:9 media blocks without marketplace banners, competing recommendations, or forced re-compression.
+- **Private drafts & quiet edits**: I can work on new case studies or blog drafts locally in Keystatic (`published: false`) and push repository updates without publishing unfinished work.
+- **Built-in SEO & portability**: every page ships static HTML with clean metadata, `sitemap.xml`, and `Person` schema — and since all content is plain `.mdoc` and `.json`, I can move or redesign the site anytime without migrating out of a closed platform.
+
+## 1-Click Social Media Distribution via RSS
+
+One of the biggest practical wins of this architecture is turning portfolio updates into **1-click social media publishing** without copying links, re-uploading thumbnails, or rewriting posts across five different tabs.
+
+In Keystatic, right beside **Published**, every project and article has a **Push to RSS** toggle (`publishToRss`). That single checkbox separates *updating my website* from *announcing a release*:
+
+- **Silent updates (`Push to RSS` off)**: fixing typos, reordering cards, or archiving older works updates the site without triggering any notifications.
+- **1-click announcements (`Push to RSS` on)**: checking the box and running `release.bat` automatically adds a structured `<item>` to `https://artdanylov.com/rss.xml` with the title, canonical link, category (`Portfolio` or `Blog`), summary, publish date, and `<enclosure>` thumbnail image.
+
+Because `/rss.xml` exposes clean, media-ready items out of the box, any RSS automation connector — whether **Make**, **Zapier**, **IFTTT**, **Buffer**, **n8n**, or a lightweight webhook/GitHub Action — can watch that single feed and automatically distribute new posts to **LinkedIn, Instagram, Discord, Telegram, or X**.
+
+I am currently exploring which automation connector fits my social channels best, but the hardest part — structured metadata, hosted CDN thumbnails, and selective one-checkbox triggers — is already built right into the publishing pipeline. Every post points traffic back to my own domain instead of someone else's feed.
