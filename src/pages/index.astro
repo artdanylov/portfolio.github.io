@@ -1,23 +1,33 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { resolveMediaUrl } from '../utils/media';
+import { resolveMediaUrl, resolveThumbnailUrls } from '../utils/media';
 import homeData from '../content/settings/home.json';
 
-const reelVideoUrl = resolveMediaUrl(homeData.reelVideo || 'videos/portfolio.mp4', 'video');
+const reelVideoUrl = resolveMediaUrl(homeData.reelVideo || 'portfolio/portfolio.mp4', 'video');
+const reelPosterUrl = homeData.reelPoster
+  ? resolveThumbnailUrls(homeData.reelPoster).staticUrl
+  : '';
 ---
 
-<BaseLayout title="Home - ArtDanylov" activeNav="home" bodyClass="has-page-video">
+<BaseLayout
+  title="Home - ArtDanylov"
+  activeNav="home"
+  bodyClass="has-page-video"
+  image={reelPosterUrl || undefined}
+  preloadImage={reelPosterUrl || undefined}
+>
   <Fragment slot="before-nav">
     <div class="page-video-bg" aria-hidden="true">
       <video
         id="bgVideo"
         class="page-video"
         src={reelVideoUrl}
+        poster={reelPosterUrl || undefined}
         autoplay
         muted
         loop
         playsinline
-        preload="auto"
+        preload="metadata"
         tabindex="-1"
         aria-hidden="true"
         disablepictureinpicture

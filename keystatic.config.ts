@@ -140,7 +140,11 @@ export default config({
         reelButtonLabel: fields.text({ label: 'Red Button Label', defaultValue: 'Reel View' }),
         reelVideo: fields.text({
           label: 'Background & Reel Video',
-          description: 'e.g. videos/portfolio.mp4 or full https://... URL',
+          description: 'e.g. portfolio/portfolio.mp4 or full https://... URL',
+        }),
+        reelPoster: fields.text({
+          label: 'Background Video Thumbnail / Poster',
+          description: 'e.g. portfolio/portfolio_thumb_static.webp (loads instantly before video starts)',
         }),
         marqueeItems: fields.array(fields.text({ label: 'Skill / Tag' }), {
           label: 'Marquee Ticker Items',
