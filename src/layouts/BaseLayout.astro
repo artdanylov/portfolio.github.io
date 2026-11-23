@@ -53,6 +53,7 @@ const MULTILINGUAL_KEYWORDS = [
   '3D animator',
   'character rigger',
   'technical animator',
+  'game cinematics',
   '3D аніматор',
   '3D анімація',
   'ріггінг персонажів',
@@ -62,6 +63,15 @@ const MULTILINGUAL_KEYWORDS = [
   'риггинг персонажей',
   'техническая анимация',
   'игровые синематики',
+  '3D animácia',
+  'rigging postáv',
+  'herná animácia',
+  '3D Animation Deutschland',
+  'Character Rigging',
+  '3D animace',
+  'rigging postav',
+  'animacja 3D',
+  'rigging postaci',
   'Maya',
   'Unreal Engine',
   'mGear',
@@ -77,8 +87,15 @@ const personSchema = {
   url: `${siteOrigin}/`,
   jobTitle: '3D Animator & Character Rigger',
   description:
-    'Artem Danylov — 3D animator & character rigger (Maya, Unreal Engine, mocap). Артем Данилов — 3D аніматор і ріггер персонажів / 3D аниматор и риггер персонажей.',
+    'Artem Danylov — 3D animator & character rigger (Maya, Unreal Engine, mocap) working with studios across Slovakia, Germany, Czechia, Poland, and worldwide.',
   knowsLanguage: ['en', 'uk', 'ru'],
+  areaServed: [
+    { '@type': 'Country', name: 'Slovakia' },
+    { '@type': 'Country', name: 'Germany' },
+    { '@type': 'Country', name: 'Czechia' },
+    { '@type': 'Country', name: 'Poland' },
+    { '@type': 'AdministrativeArea', name: 'European Union' },
+  ],
   knowsAbout: Array.from(
     new Set([
       ...(homeData.marqueeItems || []),
@@ -91,6 +108,12 @@ const personSchema = {
       'Техническая анимация',
       'Игровые синематики',
       'Мокап',
+      '3D animácia',
+      'Rigging postáv',
+      '3D Animation',
+      '3D animace',
+      'Animacja 3D',
+      'Rigging postaci',
     ])
   ),
   sameAs,
@@ -115,6 +138,10 @@ const personSchema = {
     <meta property="og:locale" content="en_US" />
     <meta property="og:locale:alternate" content="uk_UA" />
     <meta property="og:locale:alternate" content="ru_RU" />
+    <meta property="og:locale:alternate" content="sk_SK" />
+    <meta property="og:locale:alternate" content="de_DE" />
+    <meta property="og:locale:alternate" content="cs_CZ" />
+    <meta property="og:locale:alternate" content="pl_PL" />
     <meta property="og:type" content={ogType} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
