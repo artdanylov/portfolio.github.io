@@ -2081,6 +2081,16 @@ THUMB_STUDIO_HTML = r"""<!DOCTYPE html>
             <input type="number" id="setWatermarkScale" min="50" max="200" step="5" />
           </div>
         </div>
+        <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:6px; flex:1; min-width:200px;">
+            <label for="reconvertExcludeInput" style="font-size:11.5px; color:var(--muted); white-space:nowrap;" title="Comma-separated video stems or relative paths to skip (e.g. portfolio)">Exclude:</label>
+            <input type="text" id="reconvertExcludeInput" value="portfolio" placeholder="e.g. portfolio" style="flex:1; min-width:110px; padding:4px 8px; font-size:12px; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:6px;" />
+          </div>
+          <span id="reconvertAllStatus" style="font-size:11.5px; color:#ff9c6e; font-family:monospace;"></span>
+          <button type="button" class="btn-sm" id="reconvertAllVideosBtn" title="Save current settings and re-encode all matching .mp4 videos from clean _toConvert/ sources (thumbnails stay untouched)">
+            🔁 Reconvert All Videos
+          </button>
+        </div>
       </div>
 
       <div class="settings-footer">
@@ -2190,6 +2200,16 @@ THUMB_STUDIO_HTML = r"""<!DOCTYPE html>
   const cancelSettingsBtn = document.getElementById('cancelSettingsBtn');
   const saveSettingsBtn = document.getElementById('saveSettingsBtn');
   const resetSettingsBtn = document.getElementById('resetSettingsBtn');
+  const reconvertExcludeInput = document.getElementById('reconvertExcludeInput');
+  const reconvertAllVideosBtn = document.getElementById('reconvertAllVideosBtn');
+  const reconvertAllStatus = document.getElementById('reconvertAllStatus');
+  try {
+    const savedExcl = localStorage.getItem('ad_studio_reconvert_exclude');
+    if (savedExcl !== null) reconvertExcludeInput.value = savedExcl;
+  } catch {}
+  reconvertExcludeInput.addEventListener('input', () => {
+    try { localStorage.setItem('ad_studio_reconvert_exclude', reconvertExcludeInput.value); } catch {}
+  });
 
   let studioSettings = {
     max_width: 1920,
@@ -2281,8 +2301,8 @@ THUMB_STUDIO_HTML = r"""<!DOCTYPE html>
     });
   });
 
-  saveSettingsBtn.addEventListener('click', async () => {
-    const payload = {
+  function collectSettingsPayloadFromForm() {
+    return {
       thumb_width: Number(document.getElementById('setThumbWidth').value),
       thumb_height: Number(document.getElementById('setThumbHeight').value),
       thumb_fps: Number(document.getElementById('setThumbFps').value),
@@ -2299,6 +2319,10 @@ THUMB_STUDIO_HTML = r"""<!DOCTYPE html>
       watermark_scale_pct: Number(document.getElementById('setWatermarkScale').value),
       webp_quality: Number(document.getElementById('setWebpQuality').value),
     };
+  }
+
+  saveSettingsBtn.addEventListener('click', async () => {
+    const payload = collectSettingsPayloadFromForm();
     saveSettingsBtn.disabled = true;
     try {
       const res = await fetch('/api/settings', {
@@ -2316,6 +2340,130 @@ THUMB_STUDIO_HTML = r"""<!DOCTYPE html>
       showToast('Failed to save settings.', true);
     } finally {
       saveSettingsBtn.disabled = false;
+    }
+  });
+
+  reconvertAllVideosBtn.addEventListener('click', async () => {
+    const rawExcl = (reconvertExcludeInput.value || '').split(',').map(s => s.trim().replace(/\\/g, '/').toLowerCase()).filter(Boolean);
+    const isExcludedVideo = (v) => {
+      const relLow = String(v.id || '').toLowerCase();
+      const stemLow = String(v.stem || '').toLowerCase();
+      const nameLow = `${stemLow}.mp4`;
+      for (const tok of rawExcl) {
+        if (tok.includes('/')) {
+          const cleanTok = tok.replace(/\/+$/, '');
+          if (relLow === cleanTok || relLow.startsWith(cleanTok + '/')) return true;
+        } else if (stemLow === tok || nameLow === tok) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    const allVideos = mediaItems.filter(v => v.kind === 'video');
+    const excludedVideos = allVideos.filter(v => isExcludedVideo(v));
+    const missingSource = allVideos.filter(v => !isExcludedVideo(v) && !v.has_source);
+    const targets = allVideos.filter(v => !isExcludedVideo(v) && v.has_source);
+
+    if (!targets.length) {
+      showToast('No matching videos with _toConvert/ sources to reconvert.', true);
+      return;
+    }
+
+    const pendingCfg = collectSettingsPayloadFromForm();
+    const wmSummary = pendingCfg.watermark_enabled
+      ? `ON (${pendingCfg.watermark_opacity}% @ ${pendingCfg.watermark_scale_pct}%)`
+      : 'OFF';
+    const exclNote = excludedVideos.length ? `\nExcluded (${excludedVideos.length}): ${excludedVideos.map(v => v.stem).join(', ')}` : '';
+    const missNote = missingSource.length ? `\nSkipped (no _toConvert source): ${missingSource.length}` : '';
+
+    if (!window.confirm(
+      `Save settings & reconvert ${targets.length} video(s) from _toConvert/?\n` +
+      `CRF: ${pendingCfg.video_crf} · Maxrate: ${pendingCfg.video_maxrate_kbps}k · Watermark: ${wmSummary}` +
+      exclNote + missNote +
+      `\n\nThumbnails (_thumb.webp) will NOT be modified.`
+    )) {
+      return;
+    }
+
+    reconvertAllVideosBtn.disabled = true;
+    saveSettingsBtn.disabled = true;
+    resetSettingsBtn.disabled = true;
+    closeSettingsBtn.disabled = true;
+    cancelSettingsBtn.disabled = true;
+
+    const curVideo = getSelectedVideo();
+    const savedTime = curVideo ? (player.currentTime || curVideo.anim_start || 0) : 0;
+    for (const el of [player, animPreviewVideo]) {
+      el.pause();
+      el.removeAttribute('src');
+      el.load();
+    }
+    await new Promise(r => setTimeout(r, 80));
+
+    let okCount = 0;
+    let failCount = 0;
+    try {
+      const cfgRes = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings: pendingCfg }),
+      });
+      const cfgData = await cfgRes.json();
+      if (cfgData.settings) applySettingsToUi(cfgData.settings);
+
+      for (let i = 0; i < targets.length; i++) {
+        const v = targets[i];
+        reconvertAllVideosBtn.textContent = `⏳ ${i + 1} / ${targets.length}...`;
+        reconvertAllStatus.textContent = `[${i + 1}/${targets.length}] ${v.stem}`;
+        try {
+          const res = await fetch('/api/reencode-video', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: v.id, video_crf: v.video_crf || 0 }),
+          });
+          const data = await res.json();
+          if (data.ok) {
+            okCount++;
+            v.size_kb = Number(data.size_kb) || v.size_kb;
+            if (curVideo && curVideo.id === v.id) {
+              videoSizeBadge.textContent = formatSizeKb(v.size_kb);
+            }
+            renderTree();
+          } else {
+            failCount++;
+          }
+        } catch {
+          failCount++;
+        }
+      }
+
+      reconvertAllStatus.textContent = failCount
+        ? `Done: ${okCount} ok, ${failCount} failed`
+        : `Done: ${okCount}/${targets.length} reconverted`;
+      showToast(
+        failCount
+          ? `Reconverted ${okCount}/${targets.length} videos (${failCount} failed).`
+          : `Successfully reconverted all ${okCount} videos!`,
+        failCount > 0
+      );
+    } catch {
+      showToast('Batch reconvert failed.', true);
+    } finally {
+      if (curVideo) {
+        const streamUrl = `/api/stream?id=${encodeURIComponent(curVideo.id)}&t=${Date.now()}`;
+        player.src = streamUrl;
+        player.currentTime = savedTime;
+        animPreviewVideo.src = streamUrl;
+        animPreviewVideo.currentTime = curVideo.anim_start;
+        if (curVideo.anim_duration > 0.05) animPreviewVideo.play().catch(() => {});
+      }
+      reconvertAllVideosBtn.disabled = false;
+      reconvertAllVideosBtn.textContent = '🔁 Reconvert All Videos';
+      saveSettingsBtn.disabled = false;
+      resetSettingsBtn.disabled = false;
+      closeSettingsBtn.disabled = false;
+      cancelSettingsBtn.disabled = false;
     }
   });
 
@@ -4112,6 +4260,12 @@ def run_thumbnail_studio(auto_upload: bool = False) -> list[Path]:
                     orig_mb = out_video.stat().st_size / (1024 * 1024)
                     print(f"[Re-encode Video] {vid_id} (from _toConvert/{src_video.relative_to(INPUT_DIR).as_posix()}, CRF={eff_crf}, maxrate={VIDEO_MAXRATE_KBPS}k)")
                     encode_video(src_video, tmp_out, has_audio=has_audio, crf=eff_crf, max_bitrate_kbps=VIDEO_MAXRATE_KBPS)
+                    orig_src_size = src_video.stat().st_size
+                    if not custom_crf and tmp_out.stat().st_size > orig_src_size:
+                        duration = max(info["duration"], 1.0)
+                        audio_kbps = 160 if has_audio else 0
+                        target_kbps = max(int((orig_src_size * 8 / 1000) / duration * 0.90) - audio_kbps, 300)
+                        encode_video(src_video, tmp_out, has_audio=has_audio, crf=23, max_bitrate_kbps=target_kbps)
 
                     replaced = False
                     last_err = None
