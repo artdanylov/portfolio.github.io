@@ -45,6 +45,9 @@ DEFAULT_SETTINGS: dict[str, int] = {
     "target_fps": 30,
     "video_crf": 21,
     "video_maxrate_kbps": 5000,
+    "watermark_enabled": 1,
+    "watermark_opacity": 35,
+    "watermark_scale_pct": 100,
     "webp_quality": 92,
     "thumb_width": 640,
     "thumb_height": 360,
@@ -54,11 +57,24 @@ DEFAULT_SETTINGS: dict[str, int] = {
     "thumb_warn_kb": 1024,
 }
 
+WATERMARK_LINE_1 = "www.artdanylov.com"
+WATERMARK_LINE_2 = "artem.danylov@gmail.com"
+WATERMARK_FONT_CANDIDATES = (
+    Path("C:/Windows/Fonts/segoeui.ttf"),
+    Path("C:/Windows/Fonts/arial.ttf"),
+    Path("C:/Windows/Fonts/calibri.ttf"),
+    Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+    Path("/System/Library/Fonts/Supplemental/Arial.ttf"),
+)
+
 MAX_WIDTH = DEFAULT_SETTINGS["max_width"]
 MAX_HEIGHT = DEFAULT_SETTINGS["max_height"]
 TARGET_FPS = DEFAULT_SETTINGS["target_fps"]
 VIDEO_CRF = DEFAULT_SETTINGS["video_crf"]
 VIDEO_MAXRATE_KBPS = DEFAULT_SETTINGS["video_maxrate_kbps"]
+WATERMARK_ENABLED = DEFAULT_SETTINGS["watermark_enabled"]
+WATERMARK_OPACITY = DEFAULT_SETTINGS["watermark_opacity"]
+WATERMARK_SCALE_PCT = DEFAULT_SETTINGS["watermark_scale_pct"]
 WEBP_QUALITY = DEFAULT_SETTINGS["webp_quality"]
 
 THUMB_WIDTH = DEFAULT_SETTINGS["thumb_width"]
@@ -119,6 +135,9 @@ def sanitize_studio_settings(raw: dict | None) -> dict[str, int]:
         "target_fps": _clamp_int(src.get("target_fps"), DEFAULT_SETTINGS["target_fps"], 15, 60),
         "video_crf": _clamp_int(src.get("video_crf"), DEFAULT_SETTINGS["video_crf"], 14, 32),
         "video_maxrate_kbps": _clamp_int(src.get("video_maxrate_kbps"), DEFAULT_SETTINGS["video_maxrate_kbps"], 1000, 25000),
+        "watermark_enabled": _clamp_int(src.get("watermark_enabled"), DEFAULT_SETTINGS["watermark_enabled"], 0, 1),
+        "watermark_opacity": _clamp_int(src.get("watermark_opacity"), DEFAULT_SETTINGS["watermark_opacity"], 10, 100),
+        "watermark_scale_pct": _clamp_int(src.get("watermark_scale_pct"), DEFAULT_SETTINGS["watermark_scale_pct"], 50, 200),
         "webp_quality": _clamp_int(src.get("webp_quality"), DEFAULT_SETTINGS["webp_quality"], 50, 100),
         "thumb_width": _clamp_int(src.get("thumb_width"), DEFAULT_SETTINGS["thumb_width"], 320, 1280),
         "thumb_height": _clamp_int(src.get("thumb_height"), DEFAULT_SETTINGS["thumb_height"], 180, 720),
@@ -131,6 +150,7 @@ def sanitize_studio_settings(raw: dict | None) -> dict[str, int]:
 
 def apply_studio_settings(cfg: dict[str, int]) -> dict[str, int]:
     global MAX_WIDTH, MAX_HEIGHT, TARGET_FPS, VIDEO_CRF, VIDEO_MAXRATE_KBPS, WEBP_QUALITY
+    global WATERMARK_ENABLED, WATERMARK_OPACITY, WATERMARK_SCALE_PCT
     global THUMB_WIDTH, THUMB_HEIGHT, THUMB_FPS, THUMB_QUALITY, THUMB_STATIC_QUALITY, THUMB_WARN_KB
     clean = sanitize_studio_settings(cfg)
     MAX_WIDTH = clean["max_width"]
@@ -138,6 +158,9 @@ def apply_studio_settings(cfg: dict[str, int]) -> dict[str, int]:
     TARGET_FPS = clean["target_fps"]
     VIDEO_CRF = clean["video_crf"]
     VIDEO_MAXRATE_KBPS = clean["video_maxrate_kbps"]
+    WATERMARK_ENABLED = clean["watermark_enabled"]
+    WATERMARK_OPACITY = clean["watermark_opacity"]
+    WATERMARK_SCALE_PCT = clean["watermark_scale_pct"]
     WEBP_QUALITY = clean["webp_quality"]
     THUMB_WIDTH = clean["thumb_width"]
     THUMB_HEIGHT = clean["thumb_height"]
@@ -294,29 +317,100 @@ def find_source_image_for_converted(conv_image: Path) -> Path | None:
     return None
 
 
+def _escape_drawtext_value(val: str) -> str:
+    return (
+        val.replace("\\", "\\\\")
+        .replace(":", r"\:")
+        .replace("'", r"\'")
+        .replace("%", r"\%")
+    )
+
+
+def resolve_watermark_font_arg() -> str:
+    for cand in WATERMARK_FONT_CANDIDATES:
+        if cand.is_file():
+            escaped = cand.as_posix().replace(":", r"\:").replace("'", r"\'")
+            return f"fontfile='{escaped}':"
+    return ""
+
+
+def build_watermark_vf(
+    enabled: bool | None = None,
+    opacity_pct: int | None = None,
+    scale_pct: int | None = None,
+) -> str:
+    """
+    Builds the subtle 2-line bottom-right FFmpeg drawtext filter chain (no drop shadow)
+    for converted .mp4 videos only (never used for thumbnails).
+    """
+    use_wm = bool(WATERMARK_ENABLED) if enabled is None else bool(enabled)
+    if not use_wm:
+        return ""
+
+    op = WATERMARK_OPACITY if opacity_pct is None else _clamp_int(opacity_pct, 35, 10, 100)
+    sc = WATERMARK_SCALE_PCT if scale_pct is None else _clamp_int(scale_pct, 100, 50, 200)
+    alpha = f"{op / 100.0:.2f}".rstrip("0").rstrip(".")
+    scale = sc / 100.0
+
+    font_arg = resolve_watermark_font_arg()
+    t1 = _escape_drawtext_value(WATERMARK_LINE_1)
+    t2 = _escape_drawtext_value(WATERMARK_LINE_2)
+
+    fs1_min = max(10, int(round(14 * scale)))
+    fs2_min = max(9, int(round(13 * scale)))
+    gap_min = max(12, int(round(17 * scale)))
+    fs1_ratio = 0.0167 * scale
+    fs2_ratio = 0.0150 * scale
+    gap_ratio = 0.0185 * scale
+
+    line1 = (
+        f"drawtext={font_arg}"
+        f"text='{t1}':"
+        f"fontcolor=white@{alpha}:"
+        f"fontsize='max({fs1_min}\\,round(h*{fs1_ratio:.5f}))':"
+        r"x='w-tw-max(18\,round(w*0.015))':"
+        f"y='h-th-max(16\\,round(h*0.016))-max({gap_min}\\,round(h*{gap_ratio:.5f}))'"
+    )
+    line2 = (
+        f"drawtext={font_arg}"
+        f"text='{t2}':"
+        f"fontcolor=white@{alpha}:"
+        f"fontsize='max({fs2_min}\\,round(h*{fs2_ratio:.5f}))':"
+        r"x='w-tw-max(18\,round(w*0.015))':"
+        r"y='h-th-max(16\,round(h*0.016))'"
+    )
+    return f"{line1},{line2}"
+
+
 def encode_video(
     src: Path,
     out_video: Path,
     has_audio: bool = True,
     crf: int | None = None,
     max_bitrate_kbps: int | None = None,
+    watermark: bool | None = None,
 ) -> None:
     """
     Encodes H.264 MP4 optimized for Cloudflare R2 streaming and universal browser hardware decoding:
     - High@L4.1, yuv420p, bt709 color signaling
     - Closed GOP with 2-second keyframe interval (-g 60) for fast HTTP Range scrubbing
     - VBV capped CRF (-maxrate / -bufsize) to prevent bandwidth spikes on 3D renders
+    - Subtle 2-line bottom-right anti-theft watermark (when enabled; never applied to thumbnails)
     - Smart audio: omits audio track (-an) if source has no audio stream
     """
     if crf is None:
         crf = VIDEO_CRF
     if max_bitrate_kbps is None:
         max_bitrate_kbps = VIDEO_MAXRATE_KBPS
-    vf_filter = (
-        f"scale='min({MAX_WIDTH},iw)':'min({MAX_HEIGHT},ih)':force_original_aspect_ratio=decrease:flags=lanczos,"
-        "scale=trunc(iw/2)*2:trunc(ih/2)*2,"
-        f"fps='min({TARGET_FPS},source_fps)'"
-    )
+    vf_parts = [
+        f"scale='min({MAX_WIDTH},iw)':'min({MAX_HEIGHT},ih)':force_original_aspect_ratio=decrease:flags=lanczos",
+        "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+        f"fps='min({TARGET_FPS},source_fps)'",
+    ]
+    wm_vf = build_watermark_vf(enabled=watermark)
+    if wm_vf:
+        vf_parts.append(wm_vf)
+    vf_filter = ",".join(vf_parts)
     cmd = [
         "ffmpeg",
         "-y",
@@ -727,7 +821,7 @@ def convert_all() -> list[Path]:
         new_size = out_video.stat().st_size
 
         if new_size > orig_size:
-            if is_web_ready(info):
+            if not WATERMARK_ENABLED and is_web_ready(info):
                 remux_faststart(src, out_video, has_audio=has_audio)
                 new_size = out_video.stat().st_size
             else:
@@ -1946,7 +2040,13 @@ THUMB_STUDIO_HTML = r"""<!DOCTYPE html>
       </div>
 
       <div class="settings-group">
-        <div class="settings-group-title">Converted Videos (.mp4 · H.264)</div>
+        <div class="settings-group-title" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+          <span>Converted Videos (.mp4 · H.264)</span>
+          <label class="check-label" style="font-size:11.5px; font-weight:600; text-transform:none; letter-spacing:0;" title="Burns 2-line watermark (www.artdanylov.com / artem.danylov@gmail.com) into converted .mp4 videos only; thumbnails stay clean">
+            <input type="checkbox" id="setWatermarkEnabled" checked />
+            <span>Watermark (.mp4 only)</span>
+          </label>
+        </div>
         <div class="settings-grid">
           <div class="settings-field">
             <label for="setMaxWidth">Max Width (px)</label>
@@ -1971,6 +2071,14 @@ THUMB_STUDIO_HTML = r"""<!DOCTYPE html>
           <div class="settings-field">
             <label for="setWebpQuality">Image WebP Quality (50–100)</label>
             <input type="number" id="setWebpQuality" min="50" max="100" step="1" />
+          </div>
+          <div class="settings-field">
+            <label for="setWatermarkOpacity">Watermark Opacity % (10–100)</label>
+            <input type="number" id="setWatermarkOpacity" min="10" max="100" step="5" />
+          </div>
+          <div class="settings-field">
+            <label for="setWatermarkScale">Watermark Size % (50–200)</label>
+            <input type="number" id="setWatermarkScale" min="50" max="200" step="5" />
           </div>
         </div>
       </div>
@@ -2089,6 +2197,9 @@ THUMB_STUDIO_HTML = r"""<!DOCTYPE html>
     target_fps: 30,
     video_crf: 21,
     video_maxrate_kbps: 5000,
+    watermark_enabled: 1,
+    watermark_opacity: 35,
+    watermark_scale_pct: 100,
     webp_quality: 92,
     thumb_width: 640,
     thumb_height: 360,
@@ -2140,6 +2251,9 @@ THUMB_STUDIO_HTML = r"""<!DOCTYPE html>
     document.getElementById('setTargetFps').value = c.target_fps;
     document.getElementById('setVideoCrf').value = c.video_crf;
     document.getElementById('setVideoMaxrate').value = c.video_maxrate_kbps;
+    document.getElementById('setWatermarkEnabled').checked = Boolean(c.watermark_enabled);
+    document.getElementById('setWatermarkOpacity').value = c.watermark_opacity ?? 35;
+    document.getElementById('setWatermarkScale').value = c.watermark_scale_pct ?? 100;
     document.getElementById('setWebpQuality').value = c.webp_quality;
   }
 
@@ -2180,6 +2294,9 @@ THUMB_STUDIO_HTML = r"""<!DOCTYPE html>
       target_fps: Number(document.getElementById('setTargetFps').value),
       video_crf: Number(document.getElementById('setVideoCrf').value),
       video_maxrate_kbps: Number(document.getElementById('setVideoMaxrate').value),
+      watermark_enabled: document.getElementById('setWatermarkEnabled').checked ? 1 : 0,
+      watermark_opacity: Number(document.getElementById('setWatermarkOpacity').value),
+      watermark_scale_pct: Number(document.getElementById('setWatermarkScale').value),
       webp_quality: Number(document.getElementById('setWebpQuality').value),
     };
     saveSettingsBtn.disabled = true;
@@ -3938,9 +4055,14 @@ def run_thumbnail_studio(auto_upload: bool = False) -> list[Path]:
                     saved_cfg = save_studio_settings(DEFAULT_SETTINGS)
                 else:
                     saved_cfg = save_studio_settings(data.get("settings") or {})
+                wm_info = (
+                    f"WM={saved_cfg['watermark_opacity']}%@{saved_cfg['watermark_scale_pct']}%"
+                    if saved_cfg["watermark_enabled"]
+                    else "WM=off"
+                )
                 print(
                     f"[Settings] Video: {saved_cfg['max_width']}x{saved_cfg['max_height']}@{saved_cfg['target_fps']}fps "
-                    f"CRF={saved_cfg['video_crf']} maxrate={saved_cfg['video_maxrate_kbps']}k | "
+                    f"CRF={saved_cfg['video_crf']} maxrate={saved_cfg['video_maxrate_kbps']}k {wm_info} | "
                     f"Thumb: {saved_cfg['thumb_width']}x{saved_cfg['thumb_height']}@{saved_cfg['thumb_fps']}fps "
                     f"Q={saved_cfg['thumb_quality']} (1f Q={saved_cfg['thumb_static_quality']}) warn>{saved_cfg['thumb_warn_kb']}KB"
                 )
@@ -4342,11 +4464,105 @@ def upload_to_r2(files: list[Path]) -> None:
         print(f"  Ready: https://media.artdanylov.com/{key}")
 
 
+def reencode_converted_videos(exclude: list[str] | None = None) -> list[Path]:
+    """
+    Re-encodes existing .mp4 files in Converted/ in-place from their original clean sources
+    in _toConvert/ (preserving exact filenames and leaving _thumb.webp untouched).
+    """
+    CONVERTED_DIR.mkdir(parents=True, exist_ok=True)
+    saved_state = load_studio_state()
+    excl_tokens = [t.strip().replace("\\", "/").lower() for t in (exclude or []) if t and t.strip()]
+
+    def is_excluded(conv: Path, rel_key: str) -> bool:
+        rel_low = rel_key.lower()
+        stem_low = conv.stem.lower()
+        name_low = conv.name.lower()
+        for tok in excl_tokens:
+            if "/" in tok:
+                if rel_low == tok or rel_low.startswith(tok.rstrip("/") + "/"):
+                    return True
+            else:
+                if stem_low == tok or name_low == tok:
+                    return True
+        return False
+
+    candidates = [
+        p
+        for p in sorted(CONVERTED_DIR.rglob("*.mp4"))
+        if p.is_file() and not p.stem.endswith(".__reencode_tmp")
+    ]
+
+    targets: list[tuple[Path, str]] = []
+    for conv in candidates:
+        rel_key = conv.relative_to(CONVERTED_DIR).as_posix()
+        if is_excluded(conv, rel_key):
+            print(f"[Skip Excluded] Converted/{rel_key}", flush=True)
+            continue
+        targets.append((conv, rel_key))
+
+    if not targets:
+        print("No matching videos in Converted/ to re-encode.", flush=True)
+        return []
+
+    reencoded: list[Path] = []
+    total = len(targets)
+    for idx, (conv, rel_key) in enumerate(targets, start=1):
+        src_video = find_source_video_for_converted(conv)
+        if not src_video:
+            print(f"[{idx}/{total}] [Skip Missing Source] Converted/{rel_key} (no source in _toConvert/)", flush=True)
+            continue
+
+        saved = saved_state.get(rel_key, {})
+        raw_vcrf = saved.get("video_crf")
+        custom_crf = _clamp_int(raw_vcrf, 0, 14, 32) if raw_vcrf else 0
+        eff_crf = custom_crf if custom_crf else VIDEO_CRF
+
+        tmp_out = conv.with_name(f"{conv.stem}.__reencode_tmp.mp4")
+        src_rel = src_video.relative_to(INPUT_DIR).as_posix()
+        old_mb = conv.stat().st_size / (1024 * 1024)
+        orig_size = src_video.stat().st_size
+        print(f"[{idx}/{total}] [Re-encode] _toConvert/{src_rel} -> Converted/{rel_key} (CRF={eff_crf})", flush=True)
+
+        try:
+            info = get_video_info(src_video)
+            has_audio = info.get("has_audio", True)
+            encode_video(src_video, tmp_out, has_audio=has_audio, crf=eff_crf)
+            new_size = tmp_out.stat().st_size
+
+            if not custom_crf and new_size > orig_size:
+                duration = max(info["duration"], 1.0)
+                audio_kbps = 160 if has_audio else 0
+                target_kbps = max(int((orig_size * 8 / 1000) / duration * 0.90) - audio_kbps, 300)
+                encode_video(src_video, tmp_out, has_audio=has_audio, crf=23, max_bitrate_kbps=target_kbps)
+                new_size = tmp_out.stat().st_size
+
+            os.replace(tmp_out, conv)
+            print(f"  [OK] {old_mb:.2f} MB -> {new_size / (1024 * 1024):.2f} MB", flush=True)
+            reencoded.append(conv)
+        except Exception as exc:
+            tmp_out.unlink(missing_ok=True)
+            print(f"  [ERROR] Failed to re-encode {rel_key}: {exc}", flush=True)
+            raise
+
+    return reencoded
+
+
 def main() -> None:
     load_studio_settings()
     parser = argparse.ArgumentParser(description="Convert local media, manage thumbnails, and sync to R2.")
     parser.add_argument("--upload", action="store_true", help="Upload newly converted files/thumbnails to R2")
     parser.add_argument("--upload-all", action="store_true", help="Upload all files in Converted/ to R2")
+    parser.add_argument(
+        "--reencode-videos",
+        action="store_true",
+        help="Re-encode existing .mp4 files in Converted/ from _toConvert/ sources (leaves thumbnails untouched)",
+    )
+    parser.add_argument(
+        "--exclude",
+        action="append",
+        default=[],
+        help="Exclude video stem or relative path when using --reencode-videos (repeatable, e.g. --exclude portfolio)",
+    )
     parser.add_argument(
         "--thumbs",
         action="store_true",
@@ -4366,7 +4582,10 @@ def main() -> None:
                 upload_to_r2(all_files)
         return
 
-    produced = convert_all()
+    if args.reencode_videos:
+        produced = reencode_converted_videos(exclude=args.exclude)
+    else:
+        produced = convert_all()
     if args.upload_all:
         all_files = [
             p
