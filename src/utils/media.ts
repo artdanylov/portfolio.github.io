@@ -67,3 +67,21 @@ export function resolveThumbnailUrls(path?: string | null): { staticUrl: string;
     animUrl: '',
   };
 }
+
+/**
+ * Resolves a full-frame 1:1 video poster URL (matching exact video aspect ratio & framing, without card crop):
+ * - "folder/clip.mp4"          -> "folder/clip_poster.webp"
+ * - "folder/clip_poster.webp"  -> "folder/clip_poster.webp"
+ */
+export function resolveVideoPosterUrl(posterPath?: string | null, fallbackVideoPath?: string | null): string {
+  const raw = (posterPath && posterPath.trim()) || (fallbackVideoPath && fallbackVideoPath.trim()) || '';
+  if (!raw) return '';
+  const clean = normalizeMediaPath(raw);
+  if (!clean) return '';
+
+  if (/\.(mp4|mov|webm|m4v|avi|mkv)$/i.test(clean)) {
+    const base = clean.replace(/\.(mp4|mov|webm|m4v|avi|mkv)$/i, '');
+    return resolveMediaUrl(`${base}_poster.webp`, 'image');
+  }
+  return resolveMediaUrl(clean, 'image');
+}

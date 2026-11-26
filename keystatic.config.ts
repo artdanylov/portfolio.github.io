@@ -144,7 +144,7 @@ export default config({
         }),
         reelPoster: fields.text({
           label: 'Background Video Thumbnail / Poster',
-          description: 'e.g. portfolio/portfolio_thumb_static.webp (loads instantly before video starts)',
+          description: 'e.g. portfolio/portfolio_poster.webp (full-frame 1:1 poster matching video proportions)',
         }),
         marqueeItems: fields.array(fields.text({ label: 'Skill / Tag' }), {
           label: 'Marquee Ticker Items',

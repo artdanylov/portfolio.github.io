@@ -11,15 +11,12 @@ const ogImage = works[0]?.data.thumbnail ? resolveThumbnailUrls(works[0].data.th
   title="Portfolio - Artem Danylov"
   description="Animation, rigging and cinematics for games by Artem Danylov."
   image={ogImage}
+  preloadImage={ogImage}
   activeNav="portfolio"
 >
   <section class="page-header page-header-flex">
     <div class="wrap">
-      <h1
-        class="page-header-title page-hero-title text-gradient-brand"
-        data-aos="fade-up"
-        data-aos-duration="1000"
-      >
+      <h1 class="page-header-title page-hero-title text-gradient-brand hero-anim">
         PORTFOLIO
       </h1>
       <p class="page-header-lead copy-wide text-muted">
@@ -32,8 +29,9 @@ const ogImage = works[0]?.data.thumbnail ? resolveThumbnailUrls(works[0].data.th
     <div class="wrap-fluid wrap-padded blog-container blog-max-full">
       <div class="page-section-spacer"></div>
       <div class="pf-grid">
-        {works.map((work) => {
+        {works.map((work, index) => {
           const thumb = resolveThumbnailUrls(work.data.thumbnail);
+          const isAboveFold = index < 4;
           return (
             <article class="pf-card">
               <a
@@ -46,7 +44,11 @@ const ogImage = works[0]?.data.thumbnail ? resolveThumbnailUrls(works[0].data.th
                   data-static-src={thumb.staticUrl}
                   data-anim-src={thumb.animUrl || undefined}
                   alt={`${work.data.title} thumbnail`}
-                  loading="lazy"
+                  width="640"
+                  height="360"
+                  loading={isAboveFold ? 'eager' : 'lazy'}
+                  fetchpriority={index === 0 ? 'high' : undefined}
+                  decoding={index === 0 ? 'sync' : 'async'}
                 />
               </a>
               <div class="pf-meta">

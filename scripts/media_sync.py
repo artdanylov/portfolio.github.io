@@ -741,6 +741,29 @@ def convert_image(src: Path, out_image: Path, quality: int | None = None) -> Non
     subprocess.run(cmd, check=True)
 
 
+def extract_video_poster(video_path: Path, out_poster: Path, quality: int = 82) -> None:
+    """
+    Extracts exact 1:1 Frame 0 from a converted .mp4 video at its native resolution & aspect ratio
+    (no crop/pan/scale changes) so full-bleed background posters match the video pixel-for-pixel.
+    """
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-v",
+        "error",
+        "-i",
+        str(video_path),
+        "-frames:v",
+        "1",
+        "-c:v",
+        "libwebp",
+        "-quality",
+        str(quality),
+        str(out_poster),
+    ]
+    subprocess.run(cmd, check=True)
+
+
 def count_pending_to_convert() -> int:
     """Returns the number of new/updated videos or images waiting in _toConvert."""
     if not INPUT_DIR.exists():
@@ -758,7 +781,7 @@ def count_pending_to_convert() -> int:
             clean_out = out_dir / f"{clean_stem}.mp4"
             if not is_up_to_date(src, legacy_out) and not is_up_to_date(src, clean_out):
                 count += 1
-        elif ext in IMAGE_EXTENSIONS and not src.stem.endswith(("_thumb", "_thumb_static", "_animthumb")):
+        elif ext in IMAGE_EXTENSIONS and not src.stem.endswith(("_thumb", "_thumb_static", "_animthumb", "_poster")):
             legacy_out = out_dir / f"{src.stem}.webp"
             clean_out = out_dir / f"{clean_stem}.webp"
             if not is_up_to_date(src, legacy_out) and not is_up_to_date(src, clean_out):
@@ -780,7 +803,7 @@ def convert_all() -> list[Path]:
         f
         for f in files
         if f.suffix.lower() in IMAGE_EXTENSIONS
-        and not f.stem.endswith(("_thumb", "_thumb_static", "_animthumb"))
+        and not f.stem.endswith(("_thumb", "_thumb_static", "_animthumb", "_poster"))
     ]
 
     if not videos and not images:
@@ -788,6 +811,15 @@ def convert_all() -> list[Path]:
         return []
 
     produced: list[Path] = []
+
+    def ensure_poster(conv_video: Path, force: bool = False) -> None:
+        poster_path = conv_video.with_name(f"{conv_video.stem}_poster.webp")
+        if not force and is_up_to_date(conv_video, poster_path):
+            return
+        extract_video_poster(conv_video, poster_path)
+        rel_poster = poster_path.relative_to(CONVERTED_DIR).as_posix()
+        print(f"  [Poster] Converted/{rel_poster} ({poster_path.stat().st_size / 1024:.0f} KB)")
+        produced.append(poster_path)
 
     for src in videos:
         rel_parent = src.relative_to(INPUT_DIR).parent
@@ -801,10 +833,12 @@ def convert_all() -> list[Path]:
         if is_up_to_date(src, legacy_video):
             rel_out = legacy_video.relative_to(CONVERTED_DIR).as_posix()
             print(f"[Skip Video] {src.relative_to(INPUT_DIR).as_posix()} (Converted/{rel_out} is up to date)")
+            ensure_poster(legacy_video)
             continue
         if is_up_to_date(src, clean_video):
             rel_out = clean_video.relative_to(CONVERTED_DIR).as_posix()
             print(f"[Skip Video] {src.relative_to(INPUT_DIR).as_posix()} (Converted/{rel_out} is up to date)")
+            ensure_poster(clean_video)
             continue
 
         src = sanitize_source_file(src)
@@ -833,6 +867,7 @@ def convert_all() -> list[Path]:
 
         print(f"  [OK] {orig_size / (1024 * 1024):.2f} MB -> {new_size / (1024 * 1024):.2f} MB")
         produced.append(out_video)
+        ensure_poster(out_video, force=True)
 
     for src in images:
         rel_parent = src.relative_to(INPUT_DIR).parent
@@ -959,7 +994,7 @@ def collect_converted_media_catalog() -> list[dict]:
             continue
         if img.suffix.lower() not in {".webp", ".png", ".jpg", ".jpeg", ".gif"}:
             continue
-        if img.stem.endswith(("_thumb", "_thumb_static", "_animthumb")):
+        if img.stem.endswith(("_thumb", "_thumb_static", "_animthumb", "_poster")):
             continue
         rel_key = img.relative_to(CONVERTED_DIR).as_posix()
         rel_parent = img.relative_to(CONVERTED_DIR).parent
@@ -4475,7 +4510,7 @@ def run_thumbnail_studio(auto_upload: bool = False) -> list[Path]:
                     return
 
                 to_remove = [target]
-                for suffix in ("_thumb.webp", "_thumb_static.webp", "_animthumb.webp"):
+                for suffix in ("_thumb.webp", "_thumb_static.webp", "_animthumb.webp", "_poster.webp"):
                     p_extra = target.parent / f"{target.stem}{suffix}"
                     if p_extra.is_file() and p_extra != target:
                         to_remove.append(p_extra)
@@ -4577,7 +4612,7 @@ def run_thumbnail_studio(auto_upload: bool = False) -> list[Path]:
     return produced_files
 
 
-def upload_to_r2(files: list[Path]) -> None:
+def upload_to_r2(files: list[Path], include_missing_on_r2: bool = False) -> None:
     load_env(BASE_DIR / ".env")
     account_id = os.getenv("R2_ACCOUNT_ID")
     access_key = os.getenv("R2_ACCESS_KEY_ID")
@@ -4602,8 +4637,31 @@ def upload_to_r2(files: list[Path]) -> None:
         region_name="auto",
     )
 
+    upload_queue = list(files)
+    if include_missing_on_r2 and CONVERTED_DIR.exists():
+        try:
+            existing_keys: set[str] = set()
+            paginator = s3.get_paginator("list_objects_v2")
+            for page in paginator.paginate(Bucket=bucket):
+                for obj in page.get("Contents", []):
+                    k = obj.get("Key")
+                    if k:
+                        existing_keys.add(k)
+            for candidate in sorted([*CONVERTED_DIR.rglob("*.mp4"), *CONVERTED_DIR.rglob("*.webp")]):
+                if not candidate.is_file():
+                    continue
+                rel_key = candidate.relative_to(CONVERTED_DIR).as_posix()
+                if rel_key not in existing_keys:
+                    upload_queue.append(candidate)
+        except Exception as exc:
+            print(f"[Warn] Could not list R2 bucket to check missing files: {exc}")
+
+    if not upload_queue:
+        print("No new or missing files to upload to R2.")
+        return
+
     seen: set[Path] = set()
-    for file_path in files:
+    for file_path in upload_queue:
         if file_path in seen or not file_path.is_file():
             continue
         seen.add(file_path)
@@ -4691,8 +4749,11 @@ def reencode_converted_videos(exclude: list[str] | None = None) -> list[Path]:
                 new_size = tmp_out.stat().st_size
 
             os.replace(tmp_out, conv)
-            print(f"  [OK] {old_mb:.2f} MB -> {new_size / (1024 * 1024):.2f} MB", flush=True)
+            poster_path = conv.with_name(f"{conv.stem}_poster.webp")
+            extract_video_poster(conv, poster_path)
+            print(f"  [OK] {old_mb:.2f} MB -> {new_size / (1024 * 1024):.2f} MB (+ _poster.webp)", flush=True)
             reencoded.append(conv)
+            reencoded.append(poster_path)
         except Exception as exc:
             tmp_out.unlink(missing_ok=True)
             print(f"  [ERROR] Failed to re-encode {rel_key}: {exc}", flush=True)
@@ -4749,10 +4810,7 @@ def main() -> None:
         if all_files:
             upload_to_r2(all_files)
     elif args.upload:
-        if produced:
-            upload_to_r2(produced)
-        else:
-            print("No new converted files to upload to R2.")
+        upload_to_r2(produced, include_missing_on_r2=True)
 
 
 if __name__ == "__main__":

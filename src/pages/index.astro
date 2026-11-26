@@ -1,12 +1,11 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { resolveMediaUrl, resolveThumbnailUrls } from '../utils/media';
+import { resolveMediaUrl, resolveVideoPosterUrl } from '../utils/media';
 import homeData from '../content/settings/home.json';
 
-const reelVideoUrl = resolveMediaUrl(homeData.reelVideo || 'portfolio/portfolio.mp4', 'video');
-const reelPosterUrl = homeData.reelPoster
-  ? resolveThumbnailUrls(homeData.reelPoster).staticUrl
-  : '';
+const reelVideoPath = homeData.reelVideo || 'portfolio/portfolio.mp4';
+const reelVideoUrl = resolveMediaUrl(reelVideoPath, 'video');
+const reelPosterUrl = resolveVideoPosterUrl(homeData.reelPoster, reelVideoPath);
 ---
 
 <BaseLayout
@@ -18,16 +17,28 @@ const reelPosterUrl = homeData.reelPoster
 >
   <Fragment slot="before-nav">
     <div class="page-video-bg" aria-hidden="true">
+      {reelPosterUrl && (
+        <img
+          class="page-video-poster"
+          src={reelPosterUrl}
+          alt=""
+          width="1920"
+          height="1080"
+          fetchpriority="high"
+          decoding="sync"
+          onerror="this.style.display='none'"
+        />
+      )}
       <video
         id="bgVideo"
         class="page-video"
-        src={reelVideoUrl}
-        poster={reelPosterUrl || undefined}
-        autoplay
+        src={reelPosterUrl ? undefined : reelVideoUrl}
+        data-src={reelPosterUrl ? reelVideoUrl : undefined}
+        autoplay={!reelPosterUrl || undefined}
         muted
         loop
         playsinline
-        preload="metadata"
+        preload={reelPosterUrl ? 'none' : 'metadata'}
         tabindex="-1"
         aria-hidden="true"
         disablepictureinpicture
@@ -40,27 +51,13 @@ const reelPosterUrl = homeData.reelPoster
 
   <section class="hero-section">
     <div class="wrap-fluid wrap-padded hero-inner">
-      <h1
-        class="hero-title-main page-hero-title hero-display-title text-gradient-brand"
-        data-aos="fade-up"
-        data-aos-duration="1000"
-      >
+      <h1 class="hero-title-main page-hero-title hero-display-title text-gradient-brand hero-anim">
         {homeData.heroTitle}
       </h1>
-      <p
-        class="hero-copy copy-wide text-muted"
-        data-aos="fade-up"
-        data-aos-duration="800"
-        data-aos-delay="700"
-      >
+      <p class="hero-copy copy-wide text-muted hero-anim hero-anim-delay-1">
         <strong class="hero-lead-strong">{homeData.heroLeadBold}</strong>&nbsp;{homeData.heroLeadRest}
       </p>
-      <div
-        class="hero-actions"
-        data-aos="fade-up"
-        data-aos-duration="800"
-        data-aos-delay="750"
-      >
+      <div class="hero-actions hero-anim hero-anim-delay-2">
         <a class="button button-primary button-lg" id="reelTrigger" role="button" href="#reel">{homeData.reelButtonLabel}</a>
       </div>
     </div>

@@ -21,15 +21,12 @@ function formatDate(date: Date): string {
   title="Blog - ArtDanylov"
   description="Notes on 3D animation, rigging, Houdini, and pipeline by Artem Danylov."
   image={ogImage}
+  preloadImage={ogImage}
   activeNav="blog"
 >
   <section class="page-header">
     <div class="wrap">
-      <h1
-        class="page-header-title page-hero-title text-gradient-brand"
-        data-aos="fade-up"
-        data-aos-duration="1000"
-      >
+      <h1 class="page-header-title page-hero-title text-gradient-brand hero-anim">
         BLOG
       </h1>
       <p class="page-header-lead copy-wide text-muted">
@@ -42,8 +39,9 @@ function formatDate(date: Date): string {
     <div class="wrap-fluid wrap-padded blog-container blog-max-lg">
       <div class="page-section-spacer"></div>
       <div class="blog-grid-4">
-        {articles.map((article) => {
+        {articles.map((article, index) => {
           const thumb = resolveThumbnailUrls(article.data.coverImage);
+          const isAboveFold = index < 3;
           return (
             <article class="blog-card">
               <a
@@ -56,7 +54,11 @@ function formatDate(date: Date): string {
                   data-static-src={thumb.staticUrl}
                   data-anim-src={thumb.animUrl || undefined}
                   alt={article.data.title}
-                  loading="lazy"
+                  width="640"
+                  height="360"
+                  loading={isAboveFold ? 'eager' : 'lazy'}
+                  fetchpriority={index === 0 ? 'high' : undefined}
+                  decoding={index === 0 ? 'sync' : 'async'}
                 />
               </a>
               <div class="blog-card-body">
